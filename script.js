@@ -1,4 +1,4 @@
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/{ID}/export?format=csv';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/15nF9Oz9uI4aY7pf7LJ2IXmWkQrVcVVUT/edit?usp=drive_link&ouid=108956507851969610795&rtpof=true&sd=true';
 
 async function fetchCSV(url) {
   const res = await fetch(url);
