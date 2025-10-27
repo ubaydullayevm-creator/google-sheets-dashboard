@@ -7,17 +7,28 @@
   <style>
     body {
       font-family: "Segoe UI", Arial, sans-serif;
-      text-align: center;
       background: #f8fafc;
       color: #111827;
-      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 40px 20px;
     }
-    canvas {
-      max-width: 600px;
-      margin-top: 40px;
-    }
+
     h2 {
       font-weight: 600;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      display: block;
     }
   </style>
 </head>
@@ -86,7 +97,7 @@
             if (elements.length > 0) {
               const index = elements[0].index;
               const dataset = chart.data.datasets[0];
-              
+
               // выделение активного сегмента
               dataset.backgroundColor = dataset.backgroundColor.map((color, i) =>
                 i === index ? color : '#e5e7eb'
