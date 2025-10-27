@@ -2,123 +2,105 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Интерактивная пицца-диаграмма</title>
+  <title>HR Аналитика — Этапы кандидатов</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: "Segoe UI", Arial, sans-serif;
       text-align: center;
-      background: #f9f9f9;
-      margin: 0;
+      background: #f8fafc;
+      color: #111827;
       padding: 40px;
     }
-    h2 {
-      margin-bottom: 20px;
+    canvas {
+      max-width: 600px;
+      margin-top: 40px;
     }
-    .chart-container {
-      position: relative;
-      margin: auto;
-      height: 400px;
-      width: 400px;
-      max-width: 90vw;
-      max-height: 90vh;
+    h2 {
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
-  <h2>Продажи по категориям 🍕</h2>
-  <div class="chart-container">
-    <canvas id="myChart"></canvas>
-  </div>
+  <h2>Статистика по этапам кандидатов</h2>
+  <canvas id="myChart"></canvas>
 
   <script>
-    const SHEET_ID = '15nF9Oz9uI4aY7pf7LJ2IXmWkQrVcVVUT';
-    const SHEET_NAME = 'Лист1';
-    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
+    // 🔗 Ссылка на опубликованную Google Sheet (CSV)
+    const SHEET_URL =
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vQwayAC4nqBpPb04NsR35q2BkuECXgdONmPOki6jGaudEY7LGBsCZfnJjRPzDA5qypKOcDAMzNPuC9-/pub?output=csv';
 
     async function fetchCSV(url) {
       const res = await fetch(url);
-      return await res.text();
+      const text = await res.text();
+      return text;
     }
 
     function parseCSV(data) {
       const lines = data.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-      const rows = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.replace(/"/g, '').trim());
-        return Object.fromEntries(values.map((v, i) => [headers[i], v]));
+      const headers = lines[0].split(',');
+      return lines.slice(1).map(line => {
+        const values = line.split(',');
+        return Object.fromEntries(values.map((v, i) => [headers[i]?.trim(), v.trim()]));
       });
-      return rows;
     }
 
+    let chart; // глобальная переменная для хранения диаграммы
+
     async function drawChart() {
-      const csv = await fetchCSV(CSV_URL);
+      const csv = await fetchCSV(SHEET_URL);
       const data = parseCSV(csv);
 
-      // 🔹 Группируем по "name"
-      const grouped = {};
+      // Подсчёт количества кандидатов по каждому этапу
+      const stages = {};
       data.forEach(row => {
-        const name = row.name;
-        const usd = parseFloat(row.usd);
-        if (!grouped[name]) grouped[name] = 0;
-        grouped[name] += usd;
+        const stage = row['Этап'] || 'Не указано';
+        stages[stage] = (stages[stage] || 0) + 1;
       });
 
-      const labels = Object.keys(grouped);
-      const values = Object.values(grouped);
-
-      const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-        '#9966FF', '#FF9F40', '#E7E9ED'
-      ];
+      const labels = Object.keys(stages);
+      const values = Object.values(stages);
 
       const ctx = document.getElementById('myChart').getContext('2d');
 
-      const chart = new Chart(ctx, {
+      if (chart) chart.destroy(); // перерисовка при обновлении
+
+      chart = new Chart(ctx, {
         type: 'pie',
         data: {
           labels: labels,
           datasets: [{
             data: values,
-            backgroundColor: colors
+            backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa'],
+            borderWidth: 2,
+            borderColor: '#fff'
           }]
         },
         options: {
-          maintainAspectRatio: false,
           responsive: true,
           plugins: {
             legend: { position: 'bottom' },
-            title: { display: true, text: 'Интерактивная диаграмма' }
+            tooltip: { enabled: true }
           },
-          onClick: (e, elements) => {
+          onClick: (event, elements) => {
             if (elements.length > 0) {
               const index = elements[0].index;
-              toggleHighlight(index, chart);
+              const dataset = chart.data.datasets[0];
+              
+              // выделение активного сегмента
+              dataset.backgroundColor = dataset.backgroundColor.map((color, i) =>
+                i === index ? color : '#e5e7eb'
+              );
+
+              chart.update();
             }
           }
         }
       });
-
-      let selectedIndex = null;
-
-      function toggleHighlight(index, chart) {
-        const dataset = chart.data.datasets[0];
-        if (selectedIndex === index) {
-          // если нажали повторно — сбросить выделение
-          dataset.backgroundColor = colors;
-          selectedIndex = null;
-        } else {
-          // делаем выбранный сегмент ярким, остальные серыми
-          dataset.backgroundColor = dataset.data.map((_, i) =>
-            i === index ? colors[i] : 'rgba(180,180,180,0.3)'
-          );
-          selectedIndex = index;
-        }
-        chart.update();
-      }
     }
 
     drawChart();
+    setInterval(drawChart, 60000); // автообновление каждые 60 секунд
   </script>
 </body>
 </html>
