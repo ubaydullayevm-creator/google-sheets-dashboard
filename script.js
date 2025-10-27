@@ -22,8 +22,8 @@ async function drawChart() {
     const data = parseCSV(csv);
 
     // ⚙️ Предполагаем, что столбцы называются "Дата" и "Значение"
-    const labels = data.map(row => row['Дата']);
-    const values = data.map(row => parseFloat(row['Значение']));
+    const labels = data.map(row => row['name']);
+    const values = data.map(row => parseFloat(row['usd']));
 
     const ctx = document.getElementById('myChart').getContext('2d');
     new Chart(ctx, {
