@@ -1,4 +1,4 @@
-// 🟡 ВАЖНО: используй ссылку в формате /gviz/tq?tqx=out:csv
+// Ссылка на твой Google Sheets CSV (важно — формат gviz/tq?tqx=out:csv)
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/15nF9Oz9uI4aY7pf7LJ2IXmWkQrVcVVUT/gviz/tq?tqx=out:csv';
 
 async function fetchCSV(url) {
@@ -21,31 +21,44 @@ async function drawChart() {
     const csv = await fetchCSV(SHEET_URL);
     const data = parseCSV(csv);
 
-    // ⚙️ Предполагаем, что столбцы называются "Дата" и "Значение"
+    // 🎯 Берём столбцы name и usd
     const labels = data.map(row => row['name']);
     const values = data.map(row => parseFloat(row['usd']));
 
+    // 🎨 Генерация случайных цветов для каждого сегмента
+    const colors = labels.map(() =>
+      `hsl(${Math.random() * 360}, 70%, 60%)`
+    );
+
     const ctx = document.getElementById('myChart').getContext('2d');
     new Chart(ctx, {
-      type: 'line',
+      type: 'pie',
       data: {
         labels,
         datasets: [{
-          label: 'Значение',
+          label: 'USD по каждому name',
           data: values,
-          borderColor: 'blue',
-          tension: 0.2,
-          fill: false
+          backgroundColor: colors,
+          borderColor: '#fff',
+          borderWidth: 2
         }]
       },
       options: {
-        scales: {
-          y: { beginAtZero: true }
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          title: {
+            display: true,
+            text: 'Распределение USD по имени'
+          }
         }
       }
     });
+
   } catch (err) {
-    console.error('Ошибка:', err);
+    console.error('Ошибка загрузки:', err);
   }
 }
 
