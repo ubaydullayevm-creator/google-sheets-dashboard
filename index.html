@@ -35,8 +35,8 @@
       const data = parseCSV(csv);
 
       // Предполагаем, что есть колонки: name, usd
-      const labels = data.map(row => row.name);
-      const values = data.map(row => parseFloat(row.usd));
+      const labels = data.map(row => row.usd);
+      const values = data.map(row => parseFloat(row.name));
 
       const ctx = document.getElementById('myChart').getContext('2d');
       new Chart(ctx, {
