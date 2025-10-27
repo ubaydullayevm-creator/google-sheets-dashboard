@@ -1,13 +1,171 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Пицца-диаграмма из Google Sheets</title>
-  <script src="script.js"></script>
+  <meta charset="utf-8" />
+  <title>Пицца-диаграмма из Google Sheets — single file</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:18px;color:#222}
+    h1{font-size:20px;margin-bottom:6px}
+    .controls{margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    input[type=text]{padding:6px;border:1px solid #ccc;border-radius:4px;width:420px}
+    button{padding:8px 12px;border:0;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer}
+    button.secondary{background:#4b5563}
+    #msg{margin-top:10px;color:#b91c1c}
+    #chartWrap{max-width:940px;margin-top:18px}
+    canvas{background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+    .small{font-size:13px;color:#555;margin-top:6px}
+    pre{background:#f3f4f6;padding:8px;border-radius:6px;overflow:auto}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>🍕 Визуализация данных (pie chart)</h1>
-  <canvas id="myChart" width="600" height="400"></canvas>
-  <script src="script.js"></script>
+  <h1>🍕 Pie chart (name — usd) из Google Sheets — Single HTML</h1>
+  <div class="controls">
+    <label style="font-weight:600">Используемая таблица (по умолчанию):</label>
+    <input id="sheetUrl" type="text" value="https://docs.google.com/spreadsheets/d/15nF9Oz9uI4aY7pf7LJ2IXmWkQrVcVVUT/gviz/tq?tqx=out:csv" />
+    <button id="refreshBtn">Обновить сейчас</button>
+    <button id="pubBtn" class="secondary">Как получить pub?output=csv</button>
+  </div>
+
+  <div class="small">Важно: таблица должна быть опубликована или иметь доступ «Любой, у кого есть ссылка → Просмотр». Если не работает — нажми кнопку справки справа.</div>
+  <div id="msg"></div>
+
+  <div id="chartWrap">
+    <canvas id="myChart" width="800" height="450"></canvas>
+  </div>
+
+  <div style="margin-top:14px">
+    <strong>Отладочная информация (console для подробностей):</strong>
+    <pre id="debug">Ожидание загрузки...</pre>
+  </div>
+
+<script>
+(() => {
+  // По умолчанию — ссылка, которую ты дал
+  const sheetInput = document.getElementById('sheetUrl');
+  const msgEl = document.getElementById('msg');
+  const debugEl = document.getElementById('debug');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const pubBtn = document.getElementById('pubBtn');
+  let chart = null;
+
+  // Утилиты
+  function logDebug(txt){ debugEl.textContent = (new Date()).toLocaleTimeString() + ' — ' + txt; console.log(txt); }
+  function showError(txt){ msgEl.textContent = txt; logDebug('ERROR: ' + txt); }
+  function clearError(){ msgEl.textContent = ''; }
+
+  // Простой CSV-парсер (подходящий для простых таблиц без вложенных запятых/кавычек)
+  function parseCSV(csvText){
+    const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length>0);
+    if(lines.length < 1) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows = lines.slice(1).map(line => {
+      const cols = line.split(',').map(c => c.trim());
+      const obj = {};
+      headers.forEach((h,i) => obj[h] = cols[i] !== undefined ? cols[i] : '');
+      return obj;
+    });
+    return { headers, rows };
+  }
+
+  async function fetchCSV(url){
+    logDebug('Запрос: ' + url);
+    const res = await fetch(url, {cache: "no-store"});
+    if(!res.ok) throw new Error('HTTP ' + res.status + ' при запросе CSV');
+    const txt = await res.text();
+    return txt;
+  }
+
+  function aggregateByName(rows){
+    // Возвращаем map name -> sum(usd)
+    const map = new Map();
+    rows.forEach(r => {
+      const name = (r['name'] ?? r['Name'] ?? r['имя'] ?? '').trim();
+      const usdRaw = (r['usd'] ?? r['USD'] ?? r['Usd'] ?? r['sum'] ?? '').toString().replace(/\s+/g,'').replace(',','.');
+      const usd = parseFloat(usdRaw);
+      if(!name) return;
+      if(isNaN(usd)) return;
+      map.set(name, (map.get(name) || 0) + usd);
+    });
+    return Array.from(map.entries()).sort((a,b) => b[1]-a[1]);
+  }
+
+  function drawPie(labels, values){
+    const ctx = document.getElementById('myChart').getContext('2d');
+    if(chart) chart.destroy();
+    const colors = labels.map((_,i) => `hsl(${(i*47) % 360},70%,56%)`);
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderColor: '#fff',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const val = context.parsed;
+                const total = context.dataset.data.reduce((s,x)=>s+(+x||0),0);
+                const pct = total? (val/total*100).toFixed(1) + '%' : '';
+                return `${context.label}: ${val} ${pct}`;
+              }
+            }
+          },
+          title: { display: true, text: 'Распределение usd по name' }
+        }
+      }
+    });
+  }
+
+  async function loadAndRender(){
+    clearError();
+    const url = sheetInput.value.trim();
+    if(!url){ showError('Вставь ссылку на CSV / gviz/tq?tqx=out:csv в поле.'); return; }
+    try{
+      logDebug('Начинаю загрузку данных...');
+      const csv = await fetchCSV(url);
+      if(!csv || csv.length < 3){ showError('CSV пустой или недоступен. Проверь публикацию таблицы и права доступа.'); logDebug('Полученный CSV:\n' + csv.slice(0,400)); return; }
+      const parsed = parseCSV(csv);
+      logDebug(`Заголовки: ${parsed.headers.join(', ')}`);
+      const rows = parsed.rows;
+      logDebug('Строк данных: ' + rows.length);
+      const ag = aggregateByName(rows);
+
+      if(ag.length === 0){ showError('Не найдено пар name+usd с корректными числами. Проверь названия колонок (должны быть "name" и "usd" или похожие).'); logDebug(JSON.stringify(rows.slice(0,6), null, 2)); return; }
+
+      const labels = ag.map(x=>x[0]);
+      const values = ag.map(x=>x[1]);
+      drawPie(labels, values);
+      clearError();
+      logDebug('График построен успешно. Топ элементов: ' + labels.slice(0,6).join(', '));
+    } catch(err){
+      showError('Ошибка при загрузке/парсинге: ' + err.message);
+      logDebug(err.stack || err.toString());
+    }
+  }
+
+  // Кнопки
+  refreshBtn.addEventListener('click', () => { loadAndRender(); });
+  pubBtn.addEventListener('click', () => {
+    alert('Как получить публичную CSV-ссылку:\n\n1) В Google Sheets: Файл → Опубликовать в интернете → выбрать "Весь документ" → формат CSV → Опубликовать.\n2) Или дать общий доступ: Поделиться → Любой, у кого есть ссылка → Просмотр.\n\nПосле публикации используйте ссылку формата:\nhttps://docs.google.com/spreadsheets/d/<<ID>>/gviz/tq?tqx=out:csv\nили\nhttps://docs.google.com/spreadsheets/d/e/<<...>>/pub?output=csv');
+  });
+
+  // Первичная загрузка + автоперезагрузка каждую минуту
+  loadAndRender();
+  setInterval(loadAndRender, 60000);
+
+  // Показываем пример в debug, если нужно
+  logDebug('Скрипт инициализирован. Первая попытка загрузки запущена.');
+})();
+</script>
 </body>
 </html>
