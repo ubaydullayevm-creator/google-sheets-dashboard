@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Пицца диаграмма из Google Sheets</title>
+  <title>Интерактивная пицца-диаграмма</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
-      background: #f7f7f7;
+      background: #f9f9f9;
       margin: 0;
       padding: 40px;
     }
@@ -55,6 +55,7 @@
       const csv = await fetchCSV(CSV_URL);
       const data = parseCSV(csv);
 
+      // 🔹 Группируем по "name"
       const grouped = {};
       data.forEach(row => {
         const name = row.name;
@@ -66,17 +67,20 @@
       const labels = Object.keys(grouped);
       const values = Object.values(grouped);
 
+      const colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+        '#9966FF', '#FF9F40', '#E7E9ED'
+      ];
+
       const ctx = document.getElementById('myChart').getContext('2d');
-      new Chart(ctx, {
+
+      const chart = new Chart(ctx, {
         type: 'pie',
         data: {
           labels: labels,
           datasets: [{
             data: values,
-            backgroundColor: [
-              '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-              '#9966FF', '#FF9F40', '#E7E9ED'
-            ]
+            backgroundColor: colors
           }]
         },
         options: {
@@ -84,10 +88,34 @@
           responsive: true,
           plugins: {
             legend: { position: 'bottom' },
-            title: { display: true, text: 'Сумма продаж (USD)' }
+            title: { display: true, text: 'Интерактивная диаграмма' }
+          },
+          onClick: (e, elements) => {
+            if (elements.length > 0) {
+              const index = elements[0].index;
+              toggleHighlight(index, chart);
+            }
           }
         }
       });
+
+      let selectedIndex = null;
+
+      function toggleHighlight(index, chart) {
+        const dataset = chart.data.datasets[0];
+        if (selectedIndex === index) {
+          // если нажали повторно — сбросить выделение
+          dataset.backgroundColor = colors;
+          selectedIndex = null;
+        } else {
+          // делаем выбранный сегмент ярким, остальные серыми
+          dataset.backgroundColor = dataset.data.map((_, i) =>
+            i === index ? colors[i] : 'rgba(180,180,180,0.3)'
+          );
+          selectedIndex = index;
+        }
+        chart.update();
+      }
     }
 
     drawChart();
