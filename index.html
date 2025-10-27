@@ -7,7 +7,7 @@
 </head>
 <body style="font-family: sans-serif; text-align:center; margin-top:40px;">
   <h2>Визуализация данных из Google Sheets 🍕</h2>
-  <canvas id="myChart" width="400" height="400"></canvas>
+  <canvas id="myChart" width="150" height="150"></canvas>
 
   <script>
     const SHEET_ID = '15nF9Oz9uI4aY7pf7LJ2IXmWkQrVcVVUT'; 
@@ -35,8 +35,8 @@
       const data = parseCSV(csv);
 
       // Предполагаем, что есть колонки: name, usd
-      const labels = data.map(row => row.name);
-      const values = data.map(row => parseFloat(row.date));
+      const labels = data.map(row => row.usd);
+      const values = data.map(row => parseFloat(row.name));
 
       const ctx = document.getElementById('myChart').getContext('2d');
       new Chart(ctx, {
