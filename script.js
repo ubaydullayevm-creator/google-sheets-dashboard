@@ -16,11 +16,11 @@ function cleanGroup(groupName) {
     
     // 1. Убираем всё, что после скобок или тире, и переводим в верхний регистр.
     let cleaned = groupName.toUpperCase()
-                           .split('(')[0] // Убираем (Bonus), (NonBonus)
-                           .split('-')[0] // Убираем префиксы типа 024-1
+                           .split('(')[0]
+                           .split('-')[0]
                            .trim();
                            
-    // 2. Исключаем чисто числовые строки (например, '024'). ЭТО ИСПРАВЛЕНИЕ ДЛЯ '024'.
+    // 2. Исключаем чисто числовые строки (например, '024').
     if (/^\d+$/.test(cleaned) || cleaned === '') {
         return ''; 
     }
@@ -29,11 +29,11 @@ function cleanGroup(groupName) {
     const parts = cleaned.split(/\s+/); 
     for (const part of parts) {
         if (knownGroups.includes(part)) {
-            return part; // Возвращаем найденное сокращение
+            return part; 
         }
     }
     
-    // 4. Если не найдено, возвращаем первое слово, если оно короткое (для новых групп).
+    // 4. Если не найдено, возвращаем первое слово, если оно короткое.
     if (parts.length > 0 && parts[0].length > 1 && parts[0].length <= 5) {
         return parts[0]; 
     }
@@ -48,17 +48,18 @@ function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
-    const separator = lines[0].includes(';') ? ';' : ',';
+    // Надежное определение разделителя: проверяем, что чаще встречается в первой строке данных
+    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
         
         if (row.length < 5) continue;
 
-        const rawGroup = row[1] ? row[1].trim() : ''; // Столбец Group (индекс 1)
-        const group = cleanGroup(rawGroup); // <-- Очистка группы
+        const rawGroup = row[1] ? row[1].trim() : ''; 
+        const group = cleanGroup(rawGroup);
         
-        let usdValue = row[4] ? row[4].trim() : '0'; // Столбец USD (индекс 4)
+        let usdValue = row[4] ? row[4].trim() : '0';
         
         // Очистка и преобразование USD в число
         usdValue = parseFloat(usdValue.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
@@ -77,19 +78,20 @@ function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
-    const separator = lines[0].includes(';') ? ';' : ',';
+    // Надежное определение разделителя
+    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
     
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
         
         if (row.length < 4) continue;
 
-        const rawGroup = row[2] ? row[2].trim() : ''; // Столбец Group (индекс 2)
-        const group = cleanGroup(rawGroup); // <-- Очистка группы
+        const rawGroup = row[2] ? row[2].trim() : '';
+        const group = cleanGroup(rawGroup);
         
-        let usdValue = row[3] ? row[3].trim() : '0'; // Столбец USD (индекс 3)
+        let usdValue = row[3] ? row[3].trim() : '0';
 
-        // Очистка и преобразование USD (заменяем запятые на точки, убираем пробелы)
+        // Очистка и преобразование USD (обрабатываем русские числа: 2 998,55 -> 2998.55)
         usdValue = usdValue.replace(/\./g, '').replace(/,/g, '.'); 
         usdValue = parseFloat(usdValue.replace(/['"₽$]/g, '').replace(/\s/g, ''));
         
@@ -135,34 +137,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchData() {
     if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
-        alert('Ошибка! Пожалуйста, обновите URL-адреса в файле script.js.');
+        console.error('Ошибка: Не обновлены URL-адреса Google Sheets в script.js.');
+        alert('Критическая ошибка: Обновите URL-адреса в файле script.js.');
         return;
     }
     
     try {
+        console.log('Начало загрузки данных с Google...');
+        
         const [targetResponse, salesResponse] = await Promise.all([
             fetch(TARGET_CSV_URL),
             fetch(SALES_CSV_URL)
         ]);
         
+        // --- ПРОВЕРКА СТАТУСА СЕТИ ---
         if (!targetResponse.ok || !salesResponse.ok) {
-             throw new Error('Ошибка сети при загрузке CSV. Проверьте ссылки и настройки публикации.');
+             const status = !targetResponse.ok ? targetResponse.status : salesResponse.status;
+             console.error(`КРИТИЧЕСКАЯ ОШИБКА СЕТИ. Статус: ${status}.`);
+             console.error('ПРИЧИНА: Google заблокировал доступ (CORS).');
+             alert(`Ошибка! Статус ${status}. Пожалуйста, ПОВТОРНО ОПУБЛИКУЙТЕ CSV-файлы в Google Sheets.`);
+             return;
         }
 
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
 
+        // --- ПРОВЕРКА ПУСТЫХ ДАННЫХ ---
+        if (targetCSV.length < 50 || salesCSV.length < 50) {
+            console.warn('Предупреждение: Один из CSV-файлов пуст или слишком мал.');
+        }
+
         const targets = parseTargetCSV(targetCSV);
         const sales = parseSalesCSV(salesCSV);
         
-        // Объединение данных по ключу Group
         const combinedData = combineData(targets, sales);
 
         processData(combinedData);
 
     } catch (error) {
-        console.error('Не удалось загрузить или обработать данные:', error);
-        alert(`Ошибка! Не удалось загрузить или обработать данные. Сообщение: ${error.message}`);
+        console.error('КРИТИЧЕСКАЯ ОШИБКА FETCH/ПАРСИНГА:', error);
+        alert(`Критическая ошибка! См. консоль разработчика (F12) для деталей.`);
     }
 }
 
@@ -172,7 +186,6 @@ function combineData(targets, sales) {
     const allGroups = new Set([...Object.keys(targets), ...Object.keys(sales)]);
 
     allGroups.forEach(group => {
-      // Игнорируем пустые или невалидные названия групп
       if (group && group.trim() !== '') { 
         combined[group] = {
             target: targets[group] || 0,
@@ -195,10 +208,18 @@ function processData(combinedData) {
     const chartTargets = [];
     const chartSales = [];
     
-    // Сортируем группы по Target
     const sortedGroups = Object.keys(combinedData).sort((a, b) => {
         return combinedData[b].target - combinedData[a].target;
     });
+
+    // --- ПРОВЕРКА ОТСУТСТВИЯ ДАННЫХ ПОСЛЕ ПАРСИНГА ---
+    if (sortedGroups.length === 0) {
+        console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг не дал результатов.');
+        alert('Данные не загружены. Проверьте форматирование в Google Sheets (разделители, лишние строки).');
+        return;
+    }
+    
+    console.log(`Успех! Обнаружено ${sortedGroups.length} групп для отображения.`);
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
@@ -211,7 +232,6 @@ function processData(combinedData) {
         totalTarget += target;
         totalSales += sales;
 
-        // Таблица
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
@@ -224,7 +244,6 @@ function processData(combinedData) {
         `;
         tableBody.appendChild(row);
         
-        // Для графика
         chartLabels.push(group);
         chartTargets.push(target);
         chartSales.push(sales);
@@ -301,86 +320,6 @@ function renderChart(labels, targetData, salesData) {
     }
   });
 }
-// ======================================================================================
-// === Основная логика загрузки и рендеринга (ОБНОВЛЕНО ДЛЯ ДИАГНОСТИКИ) ===
-// ======================================================================================
 
-// ... (остальной код до fetchData)
-
-async function fetchData() {
-    if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
-        console.error('Ошибка конфигурации: URL-адреса не обновлены в script.js.');
-        alert('Ошибка! Пожалуйста, обновите URL-адреса в файле script.js.');
-        return;
-    }
-    
-    try {
-        console.log('Начинаем загрузку данных с Google...');
-        
-        const [targetResponse, salesResponse] = await Promise.all([
-            fetch(TARGET_CSV_URL),
-            fetch(SALES_CSV_URL)
-        ]);
-        
-        if (!targetResponse.ok || !salesResponse.ok) {
-             console.error('Ошибка сети при загрузке CSV. Статусы:', 
-                           targetResponse.status, salesResponse.status);
-             throw new Error('Ошибка сети при загрузке CSV. Проверьте ссылки и настройки публикации.');
-        }
-
-        const targetCSV = await targetResponse.text();
-        const salesCSV = await salesResponse.text();
-
-        console.log(`Размер данных Target CSV: ${targetCSV.length} символов.`);
-        console.log(`Размер данных Sales CSV: ${salesCSV.length} символов.`);
-
-        if (targetCSV.length < 50 || salesCSV.length < 50) {
-            console.error('Предупреждение: Один из CSV-файлов пуст или слишком мал. Проверьте Google Таблицы.');
-            // Не останавливаемся, идем дальше, чтобы увидеть результат парсинга.
-        }
-
-        // Парсинг и агрегация
-        const targets = parseTargetCSV(targetCSV);
-        const sales = parseSalesCSV(salesCSV);
-        
-        // Объединение данных по ключу Group
-        const combinedData = combineData(targets, sales);
-
-        processData(combinedData);
-
-    } catch (error) {
-        console.error('КРИТИЧЕСКАЯ ОШИБКА FETCH/ПАРСИНГА:', error);
-        alert(`Критическая ошибка! См. консоль разработчика (F12) для деталей.`);
-    }
-}
-
-// ... (остальной код до processData)
-
-// ======================================================================================
-// === Построение таблицы и KPI (ОБНОВЛЕНО ДЛЯ ДИАГНОСТИКИ) ===
-// ======================================================================================
-
-function processData(combinedData) {
-    const groupKeys = Object.keys(combinedData);
-    
-    if (groupKeys.length === 0) {
-        console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг или агрегация не дали результатов.');
-        alert('Данные не загружены. Проверьте форматирование в Google Sheets (разделители, лишние строки).');
-        return; // Останавливаемся, если нет данных
-    }
-    
-    console.log(`Успех! Обнаружено ${groupKeys.length} групп для отображения.`);
-    
-    // ... (весь остальной код processData без изменений)
-    
-    let totalTarget = 0;
-    let totalSales = 0;
-    // ... и так далее, до конца функции processData
-    
-    // ...
-    // Вставьте здесь весь остальной код processData
-    // ...
-    
-    // Рендеринг графика (последняя строка)
-    renderChart(chartLabels, chartTargets, chartSales);
-}
+// Автоматическое обновление данных каждую минуту
+// setInterval(fetchData, 60000);
