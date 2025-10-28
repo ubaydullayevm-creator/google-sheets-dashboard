@@ -321,5 +321,4 @@ function renderChart(labels, targetData, salesData) {
   });
 }
 
-// Автоматическое обновление данных каждую минуту
-// setInterval(fetchData, 60000);
+setInterval(fetchData, 60000);
