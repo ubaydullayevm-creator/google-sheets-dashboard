@@ -301,5 +301,86 @@ function renderChart(labels, targetData, salesData) {
     }
   });
 }
+// ======================================================================================
+// === Основная логика загрузки и рендеринга (ОБНОВЛЕНО ДЛЯ ДИАГНОСТИКИ) ===
+// ======================================================================================
 
-setInterval(drawChart, 60000); // Обновление каждые 60 секунд
+// ... (остальной код до fetchData)
+
+async function fetchData() {
+    if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
+        console.error('Ошибка конфигурации: URL-адреса не обновлены в script.js.');
+        alert('Ошибка! Пожалуйста, обновите URL-адреса в файле script.js.');
+        return;
+    }
+    
+    try {
+        console.log('Начинаем загрузку данных с Google...');
+        
+        const [targetResponse, salesResponse] = await Promise.all([
+            fetch(TARGET_CSV_URL),
+            fetch(SALES_CSV_URL)
+        ]);
+        
+        if (!targetResponse.ok || !salesResponse.ok) {
+             console.error('Ошибка сети при загрузке CSV. Статусы:', 
+                           targetResponse.status, salesResponse.status);
+             throw new Error('Ошибка сети при загрузке CSV. Проверьте ссылки и настройки публикации.');
+        }
+
+        const targetCSV = await targetResponse.text();
+        const salesCSV = await salesResponse.text();
+
+        console.log(`Размер данных Target CSV: ${targetCSV.length} символов.`);
+        console.log(`Размер данных Sales CSV: ${salesCSV.length} символов.`);
+
+        if (targetCSV.length < 50 || salesCSV.length < 50) {
+            console.error('Предупреждение: Один из CSV-файлов пуст или слишком мал. Проверьте Google Таблицы.');
+            // Не останавливаемся, идем дальше, чтобы увидеть результат парсинга.
+        }
+
+        // Парсинг и агрегация
+        const targets = parseTargetCSV(targetCSV);
+        const sales = parseSalesCSV(salesCSV);
+        
+        // Объединение данных по ключу Group
+        const combinedData = combineData(targets, sales);
+
+        processData(combinedData);
+
+    } catch (error) {
+        console.error('КРИТИЧЕСКАЯ ОШИБКА FETCH/ПАРСИНГА:', error);
+        alert(`Критическая ошибка! См. консоль разработчика (F12) для деталей.`);
+    }
+}
+
+// ... (остальной код до processData)
+
+// ======================================================================================
+// === Построение таблицы и KPI (ОБНОВЛЕНО ДЛЯ ДИАГНОСТИКИ) ===
+// ======================================================================================
+
+function processData(combinedData) {
+    const groupKeys = Object.keys(combinedData);
+    
+    if (groupKeys.length === 0) {
+        console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг или агрегация не дали результатов.');
+        alert('Данные не загружены. Проверьте форматирование в Google Sheets (разделители, лишние строки).');
+        return; // Останавливаемся, если нет данных
+    }
+    
+    console.log(`Успех! Обнаружено ${groupKeys.length} групп для отображения.`);
+    
+    // ... (весь остальной код processData без изменений)
+    
+    let totalTarget = 0;
+    let totalSales = 0;
+    // ... и так далее, до конца функции processData
+    
+    // ...
+    // Вставьте здесь весь остальной код processData
+    // ...
+    
+    // Рендеринг графика (последняя строка)
+    renderChart(chartLabels, chartTargets, chartSales);
+}
