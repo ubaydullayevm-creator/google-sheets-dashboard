@@ -301,3 +301,5 @@ function renderChart(labels, targetData, salesData) {
     }
   });
 }
+
+setInterval(drawChart, 60000); // Обновление каждые 60 секунд
