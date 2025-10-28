@@ -1,117 +1,68 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>HR Аналитика — Этапы кандидатов</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: #f8fafc;
-      color: #111827;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      margin: 0;
-      padding: 40px 20px;
-    }
-
-    h2 {
-      font-weight: 600;
-      margin-bottom: 30px;
-      text-align: center;
-    }
-
-    canvas {
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nestle Summary</title>
+    <link rel="stylesheet" href="./main.css">
 </head>
 <body>
-  <h2>Статистика по этапам кандидатов</h2>
-  <canvas id="myChart"></canvas>
 
-  <script>
-    // 🔗 Ссылка на опубликованную Google Sheet (CSV)
-    const SHEET_URL =
-      'https://docs.google.com/spreadsheets/d/e/2PACX-1vQwayAC4nqBpPb04NsR35q2BkuECXgdONmPOki6jGaudEY7LGBsCZfnJjRPzDA5qypKOcDAMzNPuC9-/pub?output=csv';
+    <header>
+        <div class="logo-container">
+            </div>
+        <div class="title-container">
+            <h1>Nestle Summary</h1>
+            <p>Last Update: <span id="last-update"></span></p>
+        </div>
+        <div class="logo-container align-right">
+            </div>
+    </header>
 
-    async function fetchCSV(url) {
-      const res = await fetch(url);
-      const text = await res.text();
-      return text;
-    }
+    <main>
+        <section class="kpi-section">
+            <div class="kpi-box">
+                <span class="kpi-title">Target</span>
+                <span class="kpi-value" id="total-target">0</span>
+            </div>
+            <div class="kpi-box">
+                <span class="kpi-title">Sales Projection</span>
+                <span class="kpi-value" id="total-sales">0</span>
+                <span class="kpi-percent" id="total-percent">0,0%</span>
+            </div>
+        </section>
 
-    function parseCSV(data) {
-      const lines = data.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',');
-      return lines.slice(1).map(line => {
-        const values = line.split(',');
-        return Object.fromEntries(values.map((v, i) => [headers[i]?.trim(), v.trim()]));
-      });
-    }
+        <section class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Group</th>
+                        <th>Target</th>
+                        <th>Sales</th>
+                        <th>Execution in %</th>
+                        <th>Difference</th>
+                    </tr>
+                </thead>
+                <tbody id="data-table-body">
+                    </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td>Общий итог</td>
+                        <td id="footer-target">0</td>
+                        <td id="footer-sales">0</td>
+                        <td id="footer-percent">0,0%</td>
+                        <td id="footer-diff">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </section>
 
-    let chart; // глобальная переменная для хранения диаграммы
+        <section class="chart-container">
+            <canvas id="salesChart"></canvas>
+        </section>
+    </main>
 
-    async function drawChart() {
-      const csv = await fetchCSV(SHEET_URL);
-      const data = parseCSV(csv);
-
-      // Подсчёт количества кандидатов по каждому этапу
-      const stages = {};
-      data.forEach(row => {
-        const stage = row['Этап'] || 'Не указано';
-        stages[stage] = (stages[stage] || 0) + 1;
-      });
-
-      const labels = Object.keys(stages);
-      const values = Object.values(stages);
-
-      const ctx = document.getElementById('myChart').getContext('2d');
-
-      if (chart) chart.destroy(); // перерисовка при обновлении
-
-      chart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: values,
-            backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa'],
-            borderWidth: 2,
-            borderColor: '#fff'
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: { enabled: true }
-          },
-          onClick: (event, elements) => {
-            if (elements.length > 0) {
-              const index = elements[0].index;
-              const dataset = chart.data.datasets[0];
-
-              // выделение активного сегмента
-              dataset.backgroundColor = dataset.backgroundColor.map((color, i) =>
-                i === index ? color : '#e5e7eb'
-              );
-
-              chart.update();
-            }
-          }
-        }
-      });
-    }
-
-    drawChart();
-    setInterval(drawChart, 60000); // автообновление каждые 60 секунд
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./scripts.js"></script>
 </body>
 </html>
