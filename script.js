@@ -35,19 +35,21 @@ function cleanGroup(groupName) {
 
 /**
  * Агрессивная очистка строки для parseFloat
- * @param {string} usdValueString - Сырая строка из CSV.
- * @returns {number} Преобразованное число.
+ * ДОБАВЛЕНО: удаление управляющих символов и невидимых разделителей.
  */
 function aggressivelyCleanAndParse(usdValueString) {
     if (!usdValueString) return NaN;
     
-    // 1. Удаляем все пробелы
-    let cleanedString = usdValueString.replace(/\s/g, ''); 
+    // 1. Удаляем все управляющие/невидимые символы (например, Byte Order Mark или лишние переносы)
+    let cleanedString = usdValueString.replace(/[\uFEFF\r]/g, ''); 
     
-    // 2. Удаляем точки, знаки валют и кавычки (точки как разделители тысяч)
+    // 2. Удаляем все пробелы (разделители тысяч)
+    cleanedString = cleanedString.replace(/\s/g, ''); 
+    
+    // 3. Удаляем точки, знаки валют и кавычки (точки как разделители тысяч)
     cleanedString = cleanedString.replace(/['"₽$.]/g, ''); 
     
-    // 3. Заменяем запятые на точки (десятичный разделитель)
+    // 4. Заменяем запятые на точки (десятичный разделитель)
     cleanedString = cleanedString.replace(/,/g, '.'); 
     
     return parseFloat(cleanedString);
