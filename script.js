@@ -55,9 +55,7 @@ function parseSalesCSV(csvText) {
 
         if (usdValueString === '') continue; 
         
-        // ====================================================================
-        // === НОВАЯ ЛОГИКА ОЧИСТКИ (Без удаления символов валют) ===
-        // ====================================================================
+        // ЛОГИКА ОЧИСТКИ SALES (Ваши правила: только пробелы и запятые) 
         usdValueString = usdValueString.replace(/\s/g, ''); // 1. Удаляем все пробелы
         usdValueString = usdValueString.replace(/,/g, '.'); // 2. Заменяем запятые на точки
 
@@ -81,6 +79,7 @@ function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
+    // Автоопределение разделителя
     const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
@@ -100,10 +99,14 @@ function parseTargetCSV(csvText) {
         }
 
         // ====================================================================
-        // === НОВАЯ ЛОГИКА ОЧИСТКИ (Без удаления символов валют) ===
+        // === НОВАЯ, НАДЕЖНАЯ ЛОГИКА ОЧИСТКИ TARGET ===
         // ====================================================================
-        usdValueString = usdValueString.replace(/\s/g, ''); // 1. Удаляем все пробелы
-        usdValueString = usdValueString.replace(/,/g, '.'); // 2. Заменяем запятые на точки
+        // 1. Удаляем все пробелы (разделители тысяч)
+        usdValueString = usdValueString.replace(/\s/g, ''); 
+        // 2. Удаляем все символы (валюты, лишние кавычки, точки)
+        usdValueString = usdValueString.replace(/['"₽$.]/g, ''); 
+        // 3. Заменяем запятые на точки (оставшаяся запятая — десятичный разделитель)
+        usdValueString = usdValueString.replace(/,/g, '.'); 
         
         let usdValue = parseFloat(usdValueString); 
 
@@ -114,7 +117,7 @@ function parseTargetCSV(csvText) {
         // ====================================================================
         if (isNaN(usdValue)) {
             // Если не удалось преобразовать в число, мы НЕ ПРОПУСКАЕМ СТРОКУ, а учитываем ее как 0.
-            console.warn(`[ПАРСИНГ TARGET] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
+            console.warn(`[ПАРСИНГ TARGET] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}", Чистая строка: "${usdValueString}".`);
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + 0; 
         } else {
             // Накопление точного значения
