@@ -326,6 +326,11 @@ function renderChart(labels, targetData, salesData) {
 // ======================================================================================
 
 // Агрегация данных Target и Sales по полю Class (которое содержит Territory)
+// ======================================================================================
+// === Агрегация и обработка данных по ТЕРРИТОРИЯМ (ИСПРАВЛЕННЫЕ ИНДЕКСЫ) ===
+// ======================================================================================
+
+// Агрегация данных Target и Sales по полю Territory (Class)
 function aggregateByTerritory(targetCSV, salesCSV) {
     const linesTarget = targetCSV.split('\n').filter(line => line.trim() !== '');
     const linesSales = salesCSV.split('\n').filter(line => line.trim() !== '');
@@ -337,11 +342,13 @@ function aggregateByTerritory(targetCSV, salesCSV) {
     const separatorSales = (linesSales.length > 1 && linesSales[1].split(';').length > 1) ? ';' : ','; 
 
     // Парсинг Target: Парент(0), Class(1) [Territory], Group(2), USD(3)
+    // ТЕРРИТОРИЯ находится в столбце Class (индекс 1)
     for (let i = 1; i < linesTarget.length; i++) {
         const row = linesTarget[i].split(separatorTarget);
         if (row.length < 4) continue;
 
-        const territory = row[1] ? row[1].trim() : ''; // Столбец Class (индекс 1)
+        // ИНДЕКС 1 для Target
+        const territory = row[1] ? row[1].trim() : ''; 
         let usdValue = row[3] ? row[3].trim() : '0';
         
         usdValue = usdValue.replace(/\./g, '').replace(/,/g, '.'); 
@@ -352,12 +359,14 @@ function aggregateByTerritory(targetCSV, salesCSV) {
         }
     }
     
-    // Парсинг Sales: ШипДате, Group, Class(2) [Territory], Номенклатура.Парент, USD(4)
+    // Парсинг Sales: ШипДате(0), Group(1), Class(2) [Territory], Номенклатура.Парент, USD(4)
+    // ТЕРРИТОРИЯ находится в столбце Class (индекс 2)
     for (let i = 1; i < linesSales.length; i++) {
         const row = linesSales[i].split(separatorSales);
         if (row.length < 5) continue;
 
-        const territory = row[2] ? row[2].trim() : ''; // Столбец Class (индекс 2)
+        // ИНДЕКС 2 для Sales
+        const territory = row[2] ? row[2].trim() : ''; 
         let usdValue = row[4] ? row[4].trim() : '0';
         
         usdValue = parseFloat(usdValue.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
