@@ -51,7 +51,7 @@ function parseSalesCSV(csvText) {
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 5) continue; // Проверка, что строка содержит как минимум 5 столбцов
+        if (row.length < 5) continue; 
 
         // Group: столбец 1
         const rawGroup = row[1] ? row[1].trim() : ''; 
@@ -62,6 +62,7 @@ function parseSalesCSV(csvText) {
 
         // Очистка и преобразование USD в число
         usdValue = parseFloat(usdValue.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
+        usdValue = Math.round(usdValue); // <-- ОКРУГЛЕНИЕ ДЛЯ ИЗБЕЖАНИЯ ОШИБОК FLOAT
 
         if (group && !isNaN(usdValue) && group !== '') {
             aggregatedSales[group] = (aggregatedSales[group] || 0) + usdValue;
@@ -83,7 +84,7 @@ function parseTargetCSV(csvText) {
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 4) continue; // Проверка, что строка содержит как минимум 4 столбца
+        if (row.length < 4) continue; 
 
         // Group: столбец 2
         const rawGroup = row[2] ? row[2].trim() : '';
@@ -95,6 +96,7 @@ function parseTargetCSV(csvText) {
         // Очистка и преобразование USD (обрабатываем русские числа: 2 998,55 -> 2998.55)
         usdValue = usdValue.replace(/\./g, '').replace(/,/g, '.'); 
         usdValue = parseFloat(usdValue.replace(/['"₽$]/g, '').replace(/\s/g, ''));
+        usdValue = Math.round(usdValue); // <-- ОКРУГЛЕНИЕ ДЛЯ ИЗБЕЖАНИЯ ОШИБОК FLOAT
 
         if (group && !isNaN(usdValue) && group !== '') {
             aggregatedTarget[group] = (aggregatedTarget[group] || 0) + usdValue;
@@ -224,7 +226,8 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        const target = Number(item.target) || 0;
+        // Используем данные, которые уже были округлены при парсинге
+        const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;
 
         const execution = (target === 0) ? 0 : sales / target;
