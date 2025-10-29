@@ -15,26 +15,21 @@ const SALES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk5
 function cleanGroup(groupName) {
     if (!groupName) return '';
 
-    // 1. Убираем всё, что после скобок или тире, и переводим в верхний регистр.
     let cleaned = groupName.toUpperCase()
         .split('(')[0]
         .split('-')[0]
         .trim();
 
-    // 2. Исключаем чисто числовые строки (например, '024').
     if (/^\d+$/.test(cleaned) || cleaned === '') {
         return ''; 
     }
 
-    // Разделяем очищенную строку на слова
     const parts = cleaned.split(/\s+/); 
 
-    // 3. Возвращаем первое слово, если оно короткое (2-5 символов).
     if (parts.length > 0 && parts[0].length > 1 && parts[0].length <= 5) {
         return parts[0]; 
     }
 
-    // 4. Возвращаем всю очищенную строку, чтобы не терять сумму! 
     return cleaned; 
 }
 
@@ -44,13 +39,12 @@ function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
-    // ВОССТАНОВЛЕНИЕ УМНОГО ОПРЕДЕЛЕНИЯ РАЗДЕЛИТЕЛЯ
     const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 5) continue; 
+        if (row.length < 5) continue; // Оставляем базовое отсечение для Sales
 
         // Group: столбец 1
         const rawGroup = row[1] ? row[1].trim() : ''; 
@@ -67,6 +61,9 @@ function parseSalesCSV(csvText) {
 
         if (!isNaN(usdValue)) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
+        } else {
+             console.warn(`[ПАРСИНГ SALES] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
+             aggregatedSales[key] = (aggregatedSales[key] || 0) + 0; // Учитываем как 0
         }
     }
     return aggregatedSales; 
@@ -78,37 +75,44 @@ function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
-    // ВОССТАНОВЛЕНИЕ УМНОГО ОПРЕДЕЛЕНИЯ РАЗДЕЛИТЕЛЯ
     const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 4) continue; 
+        // УБРАЛИ: if (row.length < 4) continue; // Больше не пропускаем неполные строки!
 
         // Group: столбец 2
         const rawGroup = row[2] ? row[2].trim() : '';
         const group = cleanGroup(rawGroup);
 
-        // USD: столбец 3
+        // USD: столбец 3. Защита от выхода за границы массива (если строка очень короткая)
         let usdValueString = row[3] ? row[3].trim() : '';
 
-        if (usdValueString === '') continue;
+        if (usdValueString === '') {
+            // Если USD пуст, все равно создаем ключ группы и идем дальше, учитывая 0.
+            const key = group === '' ? 'UNGROUPED_TARGET' : group;
+            aggregatedTarget[key] = (aggregatedTarget[key] || 0) + 0;
+            continue;
+        }
 
         // Очистка и преобразование USD (ТОЧНОЕ ЗНАЧЕНИЕ)
         usdValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
         let usdValue = parseFloat(usdValueString.replace(/['"₽$]/g, '').replace(/\s/g, ''));
 
-        // === ЛОГИРОВАНИЕ ПРОПУЩЕННЫХ СТРОК (ОСТАВЛЯЕМ ДЛЯ ОТЛАДКИ РАЗНИЦЫ В 287) ===
-        if (isNaN(usdValue)) {
-            console.warn(`[ПАРСИНГ TARGET] Пропущена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}", Очищенный USD="${usdValueString}"`);
-            continue; 
-        }
-
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
-        // Накопление точного значения
-        aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
+        // ====================================================================
+        // === ПРИНУДИТЕЛЬНОЕ СУММИРОВАНИЕ БЕЗ ПРОПУСКОВ ===
+        // ====================================================================
+        if (isNaN(usdValue)) {
+            // Если не удалось преобразовать в число, мы НЕ ПРОПУСКАЕМ СТРОКУ, а учитываем ее как 0.
+            console.warn(`[ПАРСИНГ TARGET] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
+            aggregatedTarget[key] = (aggregatedTarget[key] || 0) + 0; 
+        } else {
+            // Накопление точного значения
+            aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
+        }
     }
     return aggregatedTarget; 
 }
