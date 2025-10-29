@@ -44,7 +44,8 @@ function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
-    const separator = ';'; 
+    // ВОССТАНОВЛЕНИЕ УМНОГО ОПРЕДЕЛЕНИЯ РАЗДЕЛИТЕЛЯ
+    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
@@ -77,7 +78,8 @@ function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
-    const separator = ';'; 
+    // ВОССТАНОВЛЕНИЕ УМНОГО ОПРЕДЕЛЕНИЯ РАЗДЕЛИТЕЛЯ
+    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
@@ -97,15 +99,11 @@ function parseTargetCSV(csvText) {
         usdValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
         let usdValue = parseFloat(usdValueString.replace(/['"₽$]/g, '').replace(/\s/g, ''));
 
-        // ====================================================================
-        // === ЛОГИРОВАНИЕ ПРОПУЩЕННЫХ СТРОК ===
-        // ====================================================================
+        // === ЛОГИРОВАНИЕ ПРОПУЩЕННЫХ СТРОК (ОСТАВЛЯЕМ ДЛЯ ОТЛАДКИ РАЗНИЦЫ В 287) ===
         if (isNaN(usdValue)) {
-            // Сообщаем, какое сырое значение не удалось преобразовать
             console.warn(`[ПАРСИНГ TARGET] Пропущена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}", Очищенный USD="${usdValueString}"`);
-            continue; // Пропускает, если USD не является числом
+            continue; 
         }
-        // ====================================================================
 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
