@@ -68,7 +68,7 @@ function parseSalesCSV(csvText) {
 
         const rawGroup = row[1] ? row[1].trim() : ''; 
         const group = cleanGroup(rawGroup);
-        const usdValueString = row[4] ? row[4].trim() : '';
+        const usdValueString = row[3] ? row[3].trim() : '';
         
         if (usdValueString.trim() === '') continue; // Пропускаем пустые строки
         
