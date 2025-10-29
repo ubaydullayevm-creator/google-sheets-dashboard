@@ -35,25 +35,24 @@ function cleanGroup(groupName) {
 
 /**
  * Агрессивная очистка строки для parseFloat
- * Преобразует русские числа (1 234 567,89) в стандартные JS числа (1234567.89).
- * Включает удаление пробелов, валют, кавычек и точек-разделителей тысяч.
  * @param {string} usdValueString - Сырая строка из CSV.
  * @returns {number} Преобразованное число.
  */
 function aggressivelyCleanAndParse(usdValueString) {
     if (!usdValueString) return NaN;
-
-    // 1. Удаляем все пробелы (разделители тысяч: 1 234 567 -> 1234567)
+    
+    // 1. Удаляем все пробелы
     let cleanedString = usdValueString.replace(/\s/g, ''); 
     
-    // 2. Удаляем точки, знаки валют и кавычки (123.456₽" -> 123456)
+    // 2. Удаляем точки, знаки валют и кавычки (точки как разделители тысяч)
     cleanedString = cleanedString.replace(/['"₽$.]/g, ''); 
     
-    // 3. Заменяем запятые на точки (123456,89 -> 123456.89)
+    // 3. Заменяем запятые на точки (десятичный разделитель)
     cleanedString = cleanedString.replace(/,/g, '.'); 
     
     return parseFloat(cleanedString);
 }
+
 
 // Парсинг и агрегация для ЛИСТА16 (Продажи)
 function parseSalesCSV(csvText) {
@@ -65,23 +64,19 @@ function parseSalesCSV(csvText) {
         const row = lines[i].split(separator);
         if (row.length < 5) continue; 
 
-        // Group: столбец 2 (индекс 1)
         const rawGroup = row[1] ? row[1].trim() : ''; 
         const group = cleanGroup(rawGroup);
-
-        // USD: столбец 5 (индекс 4)
         const usdValueString = row[4] ? row[4].trim() : '';
+        
+        if (usdValueString.trim() === '') continue; // Пропускаем пустые строки
+        
         const usdValue = aggressivelyCleanAndParse(usdValueString);
-
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
-        } else {
-             // Обнуление и предупреждение (для отладки)
-             console.warn(`[ПАРСИНГ SALES] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
-             aggregatedSales[key] = (aggregatedSales[key] || 0) + 0; 
-        }
+        } 
+        // Нечисловые строки (NaN) просто пропускаются (continue), как в старом рабочем коде.
     }
     return aggregatedSales; 
 }
@@ -97,23 +92,19 @@ function parseTargetCSV(csvText) {
         const row = lines[i].split(separator);
         if (row.length < 4) continue; 
 
-        // Group: столбец 3 (индекс 2)
         const rawGroup = row[2] ? row[2].trim() : '';
         const group = cleanGroup(rawGroup);
+        const usdValueString = row[3] ? row[3].trim() : ''; 
 
-        // USD: столбец 4 (индекс 3) - это то, что мы используем
-        const usdValueString = row[3] ? row[3].trim() : '';
+        if (usdValueString.trim() === '') continue; // Пропускаем пустые строки (как Raw USD="")
+        
         const usdValue = aggressivelyCleanAndParse(usdValueString);
-
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
-        } else {
-            // Обнуление и предупреждение (для отладки)
-            console.warn(`[ПАРСИНГ TARGET] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
-            aggregatedTarget[key] = (aggregatedTarget[key] || 0) + 0; 
-        }
+        } 
+        // Нечисловые строки (NaN, как "Bekabad") просто пропускаются (continue), как в старом рабочем коде.
     }
     return aggregatedTarget; 
 }
@@ -166,22 +157,15 @@ async function fetchData() {
             fetch(SALES_CSV_URL)
         ]);
 
-        // --- ПРОВЕРКА СТАТУСА СЕТИ ---
         if (!targetResponse.ok || !salesResponse.ok) {
             const status = !targetResponse.ok ? targetResponse.status : salesResponse.status;
             console.error(`КРИТИЧЕСКАЯ ОШИБКА СЕТИ. Статус: ${status}.`);
-            console.error('ПРИЧИНА: Google заблокировал доступ (CORS).');
             alert(`Ошибка! Статус ${status}. Пожалуйста, ПОВТОРНО ОПУБЛИКУЙТЕ CSV-файлы в Google Sheets.`);
             return;
         }
 
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
-
-        // --- ПРОВЕРКА ПУСТЫХ ДАННЫХ ---
-        if (targetCSV.length < 50 || salesCSV.length < 50) {
-            console.warn('Предупреждение: Один из CSV-файлов пуст или слишком мал.');
-        }
 
         const targets = parseTargetCSV(targetCSV);
         const sales = parseSalesCSV(salesCSV);
@@ -228,10 +212,9 @@ function processData(combinedData) {
         return combinedData[b].target - combinedData[a].target;
     });
 
-    // --- ПРОВЕРКА ОТСУТСТВИЯ ДАННЫХ ПОСЛЕ ПАРСИНГА ---
     if (sortedGroups.length === 0) {
         console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг не дал результатов.');
-        alert('Данные не загружены. Проверьте форматирование в Google Sheets (разделители, лишние строки).');
+        alert('Данные не загружены. Проверьте форматирование в Google Sheets.');
         return;
     }
 
@@ -239,7 +222,6 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        // Используем ТОЧНЫЕ данные для расчетов
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;
 
@@ -252,7 +234,6 @@ function processData(combinedData) {
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
-        // formatNumber округляет только для визуализации
         row.innerHTML = `
             <td>${group}</td>
             <td class="align-right">${formatNumber(target)}</td>
@@ -271,7 +252,6 @@ function processData(combinedData) {
     const totalExecution = (totalTarget === 0) ? 0 : totalSales / totalTarget;
     const totalDifference = totalTarget - totalSales;
 
-    // Везде используется formatNumber для ВИЗУАЛИЗАЦИИ
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
     document.getElementById('total-sales').textContent = formatNumber(totalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
@@ -322,7 +302,6 @@ function renderChart(labels, targetData, salesData) {
                 title: { display: true, text: 'Target vs Sales по Группам' },
                 tooltip: {
                     callbacks: { label: function(context) { 
-                        // Округление для отображения в тултипе
                         return `${formatNumber(context.raw)}`; 
                     } }
                 }
