@@ -34,19 +34,17 @@ function cleanGroup(groupName) {
         return parts[0]; 
     }
 
-    // 4. Иначе возвращаем очищенную строку целиком
+    // 4. Возвращаем всю очищенную строку, чтобы не терять сумму! 
     return cleaned; 
 }
 
 
 // Парсинг и агрегация для ЛИСТА16 (Продажи)
-// Используются только Group(1) и USD(4)
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
-    // Надежное определение разделителя
-    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
+    const separator = ';'; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
@@ -58,14 +56,16 @@ function parseSalesCSV(csvText) {
         const group = cleanGroup(rawGroup);
 
         // USD: столбец 4
-        let usdValue = row[4] ? row[4].trim() : '0';
+        let usdValueString = row[4] ? row[4].trim() : '';
 
-        // Очистка и преобразование USD в число (ТОЧНОЕ ЗНАЧЕНИЕ)
-        usdValue = parseFloat(usdValue.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
-        // Math.round(usdValue) УДАЛЕНО!
+        if (usdValueString === '') continue; 
 
-        if (group && !isNaN(usdValue) && group !== '') {
-            aggregatedSales[group] = (aggregatedSales[group] || 0) + usdValue;
+        let usdValue = parseFloat(usdValueString.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
+
+        const key = group === '' ? 'UNGROUPED_SALES' : group;
+
+        if (!isNaN(usdValue)) {
+            aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
         }
     }
     return aggregatedSales; 
@@ -73,13 +73,11 @@ function parseSalesCSV(csvText) {
 
 
 // Парсинг и агрегация для ЛИСТА Target
-// Используются только Group(2) и USD(3)
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
-    // Надежное определение разделителя
-    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
+    const separator = ';'; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
@@ -91,23 +89,33 @@ function parseTargetCSV(csvText) {
         const group = cleanGroup(rawGroup);
 
         // USD: столбец 3
-        let usdValue = row[3] ? row[3].trim() : '0';
+        let usdValueString = row[3] ? row[3].trim() : '';
 
-        // Очистка и преобразование USD (обрабатываем русские числа: 2 998,55 -> 2998.55)
-        usdValue = usdValue.replace(/\./g, '').replace(/,/g, '.'); 
-        // ТОЧНОЕ ЗНАЧЕНИЕ
-        usdValue = parseFloat(usdValue.replace(/['"₽$]/g, '').replace(/\s/g, ''));
-        // Math.round(usdValue) УДАЛЕНО!
+        if (usdValueString === '') continue;
 
-        if (group && !isNaN(usdValue) && group !== '') {
-            aggregatedTarget[group] = (aggregatedTarget[group] || 0) + usdValue;
+        // Очистка и преобразование USD (ТОЧНОЕ ЗНАЧЕНИЕ)
+        usdValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
+        let usdValue = parseFloat(usdValueString.replace(/['"₽$]/g, '').replace(/\s/g, ''));
+
+        // ====================================================================
+        // === ЛОГИРОВАНИЕ ПРОПУЩЕННЫХ СТРОК ===
+        // ====================================================================
+        if (isNaN(usdValue)) {
+            // Сообщаем, какое сырое значение не удалось преобразовать
+            console.warn(`[ПАРСИНГ TARGET] Пропущена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}", Очищенный USD="${usdValueString}"`);
+            continue; // Пропускает, если USD не является числом
         }
+        // ====================================================================
+
+        const key = group === '' ? 'UNGROUPED_TARGET' : group;
+
+        // Накопление точного значения
+        aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
     }
     return aggregatedTarget; 
 }
 
 // Форматирование чисел (9 360 956)
-// *** ЗДЕСЬ ОСТАЕТСЯ ОКРУГЛЕНИЕ ДЛЯ ВИЗУАЛИЗАЦИИ! ***
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU').format(Math.round(num));
 }
@@ -241,6 +249,7 @@ function processData(combinedData) {
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
+        // formatNumber округляет только для визуализации
         row.innerHTML = `
             <td>${group}</td>
             <td class="align-right">${formatNumber(target)}</td>
@@ -250,7 +259,7 @@ function processData(combinedData) {
         `;
         tableBody.appendChild(row);
 
-        chartLabels.push(target); // Для графика используем точные суммы
+        chartLabels.push(group); 
         chartTargets.push(target);
         chartSales.push(sales);
     }
@@ -322,7 +331,6 @@ function renderChart(labels, targetData, salesData) {
                         callback: function(value) {
                             if (value >= 1000000) return (value / 1000000) + ' млн';
                             if (value >= 1000) return (value / 1000) + ' тыс.';
-                            // Здесь округление не нужно, так как Chart.js работает с точными суммами
                             return value;
                         }
                     }
