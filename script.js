@@ -56,19 +56,22 @@ function parseSalesCSV(csvText) {
 
         if (usdValueString === '') continue; 
         
-        // --- СТАРАЯ, ШИРОКАЯ ОЧИСТКА ---
-        // Сначала заменяем точки на пустую строку, чтобы убрать разделители тысяч (1.000 -> 1000)
-        // Затем заменяем запятые на точки (1000,50 -> 1000.50)
+        // --- ОБНОВЛЕННАЯ ЛОГИКА ОЧИСТКИ ---
+        // 1. Заменяем точки на пустую строку, чтобы убрать разделители тысяч.
+        // 2. Затем заменяем запятые на точки (для десятичного разделителя).
         let cleanedValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
-        // Удаляем знаки валют и пробелы
-        let usdValue = parseFloat(cleanedValueString.replace(/['"₽$]/g, '').replace(/\s/g, ''));
+        
+        // 3. Финальная очистка: удаляем знаки валют и ВСЕ ПРОБЕЛЫ
+        let finalCleanedString = cleanedValueString.replace(/['"₽$]/g, '').replace(/\s/g, '');
+
+        let usdValue = parseFloat(finalCleanedString);
 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
         } 
-        // Здесь не было принудительного обнуления, строки с NaN пропускались
+        // Строки с NaN просто пропускаются (старая логика)
     }
     return aggregatedSales; 
 }
@@ -96,19 +99,22 @@ function parseTargetCSV(csvText) {
 
         if (usdValueString === '') continue;
 
-        // --- СТАРАЯ, ШИРОКАЯ ОЧИСТКА ---
-        // Сначала заменяем точки на пустую строку, чтобы убрать разделители тысяч
-        // Затем заменяем запятые на точки (для десятичного разделителя)
+        // --- ОБНОВЛЕННАЯ ЛОГИКА ОЧИСТКИ ---
+        // 1. Заменяем точки на пустую строку, чтобы убрать разделители тысяч.
+        // 2. Затем заменяем запятые на точки (для десятичного разделителя).
         let cleanedValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
-        // Удаляем знаки валют и пробелы
-        let usdValue = parseFloat(cleanedValueString.replace(/['"₽$]/g, '').replace(/\s/g, ''));
+        
+        // 3. Финальная очистка: удаляем знаки валют и ВСЕ ПРОБЕЛЫ
+        let finalCleanedString = cleanedValueString.replace(/['"₽$]/g, '').replace(/\s/g, '');
+
+        let usdValue = parseFloat(finalCleanedString);
 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
         } 
-        // Здесь не было принудительного обнуления, строки с NaN пропускались
+        // Строки с NaN просто пропускаются (старая логика)
     }
     return aggregatedTarget; 
 }
