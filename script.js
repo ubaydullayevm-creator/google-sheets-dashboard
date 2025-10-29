@@ -44,7 +44,7 @@ function parseSalesCSV(csvText) {
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 5) continue; // Оставляем базовое отсечение для Sales
+        if (row.length < 5) continue; 
 
         // Group: столбец 1
         const rawGroup = row[1] ? row[1].trim() : ''; 
@@ -54,8 +54,14 @@ function parseSalesCSV(csvText) {
         let usdValueString = row[4] ? row[4].trim() : '';
 
         if (usdValueString === '') continue; 
+        
+        // ====================================================================
+        // === НОВАЯ ЛОГИКА ОЧИСТКИ (Удалить пробелы, заменить запятую на точку) ===
+        // ====================================================================
+        usdValueString = usdValueString.replace(/\s/g, ''); // 1. Удаляем все пробелы
+        usdValueString = usdValueString.replace(/,/g, '.'); // 2. Заменяем запятые на точки
 
-        let usdValue = parseFloat(usdValueString.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
+        let usdValue = parseFloat(usdValueString);
 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
@@ -63,7 +69,7 @@ function parseSalesCSV(csvText) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
         } else {
              console.warn(`[ПАРСИНГ SALES] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
-             aggregatedSales[key] = (aggregatedSales[key] || 0) + 0; // Учитываем как 0
+             aggregatedSales[key] = (aggregatedSales[key] || 0) + 0; 
         }
     }
     return aggregatedSales; 
@@ -80,8 +86,6 @@ function parseTargetCSV(csvText) {
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        // УБРАЛИ: if (row.length < 4) continue; // Больше не пропускаем неполные строки!
-
         // Group: столбец 2
         const rawGroup = row[2] ? row[2].trim() : '';
         const group = cleanGroup(rawGroup);
@@ -90,15 +94,18 @@ function parseTargetCSV(csvText) {
         let usdValueString = row[3] ? row[3].trim() : '';
 
         if (usdValueString === '') {
-            // Если USD пуст, все равно создаем ключ группы и идем дальше, учитывая 0.
             const key = group === '' ? 'UNGROUPED_TARGET' : group;
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + 0;
             continue;
         }
 
-        // Очистка и преобразование USD (ТОЧНОЕ ЗНАЧЕНИЕ)
-        usdValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
-        let usdValue = parseFloat(usdValueString.replace(/['"₽$]/g, '').replace(/\s/g, ''));
+        // ====================================================================
+        // === НОВАЯ ЛОГИКА ОЧИСТКИ (Удалить пробелы, заменить запятую на точку) ===
+        // ====================================================================
+        usdValueString = usdValueString.replace(/\s/g, ''); // 1. Удаляем все пробелы
+        usdValueString = usdValueString.replace(/,/g, '.'); // 2. Заменяем запятые на точки
+        
+        let usdValue = parseFloat(usdValueString); 
 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
@@ -322,7 +329,7 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { label: function(context) { 
                         // Округление для отображения в тултипе
-                        return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
+                        return `${formatNumber(context.raw)}`; 
                     } }
                 }
             },
