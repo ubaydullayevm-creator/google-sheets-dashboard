@@ -56,7 +56,47 @@
                 </tfoot>
             </table>
         </section>
+<section class="table-container">
+            </section>
 
+        <section id="territory-section">
+            <h2>Разбивка по Территориям</h2>
+            <div class="chart-territory-container">
+                <div class="pie-chart-box">
+                    <h3>Target по Территориям</h3>
+                    <canvas id="targetPieChart"></canvas>
+                </div>
+                <div class="pie-chart-box">
+                    <h3>Sales по Территориям</h3>
+                    <canvas id="salesPieChart"></canvas>
+                </div>
+            </div>
+
+            <table class="territory-table">
+                <thead>
+                    <tr>
+                        <th>Territory</th>
+                        <th>Target</th>
+                        <th>Sales</th>
+                        <th>Execution in %</th>
+                        <th>Difference</th>
+                    </tr>
+                </thead>
+                <tbody id="territory-table-body">
+                    </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td>Общий итог</td>
+                        <td id="territory-footer-target">0</td>
+                        <td id="territory-footer-sales">0</td>
+                        <td id="territory-footer-percent">0,0%</td>
+                        <td id="territory-footer-diff">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </section>
+        <section class="chart-container">
+            </section>
         <section class="chart-container">
             <canvas id="salesChart"></canvas>
         </section>
