@@ -33,45 +33,55 @@ function cleanGroup(groupName) {
     return cleaned; 
 }
 
+/**
+ * Агрессивная очистка строки для parseFloat
+ * Преобразует русские числа (1 234 567,89) в стандартные JS числа (1234567.89).
+ * Включает удаление пробелов, валют, кавычек и точек-разделителей тысяч.
+ * @param {string} usdValueString - Сырая строка из CSV.
+ * @returns {number} Преобразованное число.
+ */
+function aggressivelyCleanAndParse(usdValueString) {
+    if (!usdValueString) return NaN;
+
+    // 1. Удаляем все пробелы (разделители тысяч: 1 234 567 -> 1234567)
+    let cleanedString = usdValueString.replace(/\s/g, ''); 
+    
+    // 2. Удаляем точки, знаки валют и кавычки (123.456₽" -> 123456)
+    cleanedString = cleanedString.replace(/['"₽$.]/g, ''); 
+    
+    // 3. Заменяем запятые на точки (123456,89 -> 123456.89)
+    cleanedString = cleanedString.replace(/,/g, '.'); 
+    
+    return parseFloat(cleanedString);
+}
 
 // Парсинг и агрегация для ЛИСТА16 (Продажи)
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
-
-    // Автоопределение разделителя
     const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
+        if (row.length < 5) continue; 
 
-        if (row.length < 5) continue; // Пропускаем неполные строки
-
-        // Group: столбец 1
+        // Group: столбец 2 (индекс 1)
         const rawGroup = row[1] ? row[1].trim() : ''; 
         const group = cleanGroup(rawGroup);
 
-        // USD: столбец 4
-        let usdValueString = row[4] ? row[4].trim() : '';
-
-        if (usdValueString === '') continue; 
-        
-        // --- ОБНОВЛЕННАЯ ЛОГИКА ОЧИСТКИ ---
-        // 1. Заменяем точки на пустую строку, чтобы убрать разделители тысяч.
-        // 2. Затем заменяем запятые на точки (для десятичного разделителя).
-        let cleanedValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
-        
-        // 3. Финальная очистка: удаляем знаки валют и ВСЕ ПРОБЕЛЫ
-        let finalCleanedString = cleanedValueString.replace(/['"₽$]/g, '').replace(/\s/g, '');
-
-        let usdValue = parseFloat(finalCleanedString);
+        // USD: столбец 5 (индекс 4)
+        const usdValueString = row[4] ? row[4].trim() : '';
+        const usdValue = aggressivelyCleanAndParse(usdValueString);
 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
-        } 
-        // Строки с NaN просто пропускаются (старая логика)
+        } else {
+             // Обнуление и предупреждение (для отладки)
+             console.warn(`[ПАРСИНГ SALES] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
+             aggregatedSales[key] = (aggregatedSales[key] || 0) + 0; 
+        }
     }
     return aggregatedSales; 
 }
@@ -81,47 +91,35 @@ function parseSalesCSV(csvText) {
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
-
-    // Автоопределение разделителя
     const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
+        if (row.length < 4) continue; 
 
-        if (row.length < 4) continue; // Пропускаем неполные строки
-
-        // Group: столбец 2
+        // Group: столбец 3 (индекс 2)
         const rawGroup = row[2] ? row[2].trim() : '';
         const group = cleanGroup(rawGroup);
 
-        // USD: столбец 3
-        let usdValueString = row[3] ? row[3].trim() : '';
-
-        if (usdValueString === '') continue;
-
-        // --- ОБНОВЛЕННАЯ ЛОГИКА ОЧИСТКИ ---
-        // 1. Заменяем точки на пустую строку, чтобы убрать разделители тысяч.
-        // 2. Затем заменяем запятые на точки (для десятичного разделителя).
-        let cleanedValueString = usdValueString.replace(/\./g, '').replace(/,/g, '.'); 
-        
-        // 3. Финальная очистка: удаляем знаки валют и ВСЕ ПРОБЕЛЫ
-        let finalCleanedString = cleanedValueString.replace(/['"₽$]/g, '').replace(/\s/g, '');
-
-        let usdValue = parseFloat(finalCleanedString);
+        // USD: столбец 4 (индекс 3) - это то, что мы используем
+        const usdValueString = row[3] ? row[3].trim() : '';
+        const usdValue = aggressivelyCleanAndParse(usdValueString);
 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
-        } 
-        // Строки с NaN просто пропускаются (старая логика)
+        } else {
+            // Обнуление и предупреждение (для отладки)
+            console.warn(`[ПАРСИНГ TARGET] Обнулена строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
+            aggregatedTarget[key] = (aggregatedTarget[key] || 0) + 0; 
+        }
     }
     return aggregatedTarget; 
 }
 
 // Форматирование чисел (9 360 956)
 function formatNumber(num) {
-    // Округление здесь
     return new Intl.NumberFormat('ru-RU').format(Math.round(num)); 
 }
 
