@@ -135,7 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchData();
 });
 
+// ... (остальной код до fetchData)
+
 async function fetchData() {
+    // ... (весь код проверки URL и загрузки CSV остается прежним)
     if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
         console.error('Ошибка: Не обновлены URL-адреса Google Sheets в script.js.');
         alert('Критическая ошибка: Обновите URL-адреса в файле script.js.');
@@ -162,24 +165,21 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
 
-        // --- ПРОВЕРКА ПУСТЫХ ДАННЫХ ---
-        if (targetCSV.length < 50 || salesCSV.length < 50) {
-            console.warn('Предупреждение: Один из CSV-файлов пуст или слишком мал.');
-        }
-
-        const targets = parseTargetCSV(targetCSV);
-        const sales = parseSalesCSV(salesCSV);
+        // --- Парсинг и агрегация по ГРУППАМ ---
+        const targetsByGroup = parseTargetCSV(targetCSV);
+        const salesByGroup = parseSalesCSV(salesCSV);
+        const combinedDataByGroup = combineData(targetsByGroup, salesByGroup);
+        processData(combinedDataByGroup); // Обработка ГРУПП (как раньше)
         
-        const combinedData = combineData(targets, sales);
-
-        processData(combinedData);
+        // --- НОВАЯ ОБРАБОТКА по ТЕРРИТОРИЯМ ---
+        const combinedDataByTerritory = aggregateByTerritory(targetCSV, salesCSV);
+        processTerritoryData(combinedDataByTerritory); // НОВАЯ функция
 
     } catch (error) {
         console.error('КРИТИЧЕСКАЯ ОШИБКА FETCH/ПАРСИНГА:', error);
         alert(`Критическая ошибка! См. консоль разработчика (F12) для деталей.`);
     }
 }
-
 // Объединение данных из двух объектов в один
 function combineData(targets, sales) {
     const combined = {};
@@ -319,6 +319,166 @@ function renderChart(labels, targetData, salesData) {
       }
     }
   });
+}
+
+// ======================================================================================
+// === Агрегация и обработка данных по ТЕРРИТОРИЯМ ===
+// ======================================================================================
+
+// Агрегация данных Target и Sales по полю Class (которое содержит Territory)
+function aggregateByTerritory(targetCSV, salesCSV) {
+    const linesTarget = targetCSV.split('\n').filter(line => line.trim() !== '');
+    const linesSales = salesCSV.split('\n').filter(line => line.trim() !== '');
+    
+    const targetsByTerritory = {};
+    const salesByTerritory = {};
+    
+    const separatorTarget = (linesTarget.length > 1 && linesTarget[1].split(';').length > 1) ? ';' : ','; 
+    const separatorSales = (linesSales.length > 1 && linesSales[1].split(';').length > 1) ? ';' : ','; 
+
+    // Парсинг Target: Парент(0), Class(1) [Territory], Group(2), USD(3)
+    for (let i = 1; i < linesTarget.length; i++) {
+        const row = linesTarget[i].split(separatorTarget);
+        if (row.length < 4) continue;
+
+        const territory = row[1] ? row[1].trim() : ''; // Столбец Class (индекс 1)
+        let usdValue = row[3] ? row[3].trim() : '0';
+        
+        usdValue = usdValue.replace(/\./g, '').replace(/,/g, '.'); 
+        usdValue = parseFloat(usdValue.replace(/['"₽$]/g, '').replace(/\s/g, ''));
+        
+        if (territory && !isNaN(usdValue)) {
+            targetsByTerritory[territory] = (targetsByTerritory[territory] || 0) + usdValue;
+        }
+    }
+    
+    // Парсинг Sales: ШипДате, Group, Class(2) [Territory], Номенклатура.Парент, USD(4)
+    for (let i = 1; i < linesSales.length; i++) {
+        const row = linesSales[i].split(separatorSales);
+        if (row.length < 5) continue;
+
+        const territory = row[2] ? row[2].trim() : ''; // Столбец Class (индекс 2)
+        let usdValue = row[4] ? row[4].trim() : '0';
+        
+        usdValue = parseFloat(usdValue.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
+        
+        if (territory && !isNaN(usdValue)) {
+            salesByTerritory[territory] = (salesByTerritory[territory] || 0) + usdValue;
+        }
+    }
+
+    // Объединение данных по Territory
+    return combineData(targetsByTerritory, salesByTerritory);
+}
+
+// Построение таблицы и графиков по территориям
+function processTerritoryData(combinedData) {
+    let totalTarget = 0;
+    let totalSales = 0;
+    
+    const tableBody = document.getElementById('territory-table-body');
+    tableBody.innerHTML = ''; 
+
+    const pieLabels = [];
+    const pieTargetData = [];
+    const pieSalesData = [];
+    
+    // Сортируем по Target
+    const sortedTerritories = Object.keys(combinedData).sort((a, b) => {
+        return combinedData[b].target - combinedData[a].target;
+    });
+
+    for (const territory of sortedTerritories) {
+        const item = combinedData[territory];
+        const target = Number(item.target) || 0;
+        const sales = Number(item.sales) || 0;
+        
+        const execution = (target === 0) ? 0 : sales / target;
+        const difference = target - sales;
+
+        totalTarget += target;
+        totalSales += sales;
+
+        // Таблица
+        const row = document.createElement('tr');
+        const percentClass = getPercentClass(execution);
+
+        row.innerHTML = `
+          <td>${territory}</td>
+          <td class="align-right">${formatNumber(target)}</td>
+          <td class="align-right">${formatNumber(sales)}</td>
+          <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
+          <td class="align-right">${formatNumber(difference)}</td>
+        `;
+        tableBody.appendChild(row);
+        
+        // Для графиков
+        pieLabels.push(territory);
+        pieTargetData.push(target);
+        pieSalesData.push(sales);
+    }
+
+    // Обновление Итогов
+    const totalExecution = (totalTarget === 0) ? 0 : totalSales / totalTarget;
+    const totalDifference = totalTarget - totalSales;
+
+    document.getElementById('territory-footer-target').textContent = formatNumber(totalTarget);
+    document.getElementById('territory-footer-sales').textContent = formatNumber(totalSales);
+    document.getElementById('territory-footer-percent').textContent = formatPercent(totalExecution);
+    document.getElementById('territory-footer-percent').className = getPercentClass(totalExecution);
+    document.getElementById('territory-footer-diff').textContent = formatNumber(totalDifference);
+    
+    // Рендеринг круговых диаграмм
+    renderPieChart('targetPieChart', pieLabels, pieTargetData, 'Target');
+    renderPieChart('salesPieChart', pieLabels, pieSalesData, 'Sales');
+}
+
+// Новая функция для рендеринга круговых диаграмм (Doughnut Chart)
+function renderPieChart(canvasId, labels, data, title) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // Уничтожаем старый график, если он существует
+    if (window[canvasId] instanceof Chart) {
+        window[canvasId].destroy(); 
+    }
+    
+    window[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: title,
+                data: data,
+                backgroundColor: [
+                    '#36A2EB', '#FF6384', '#FF9F40', '#4BC0C0', '#9966FF', '#FFCD56', '#C9CBCE'
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            // Показываем сумму и процент
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const currentValue = context.raw;
+                            const percentage = parseFloat((currentValue / total * 100).toFixed(1));
+                            return `${label} ${formatNumber(currentValue)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 setInterval(fetchData, 60000);
