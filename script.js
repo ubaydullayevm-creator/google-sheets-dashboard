@@ -60,9 +60,9 @@ function parseSalesCSV(csvText) {
         // USD: столбец 4
         let usdValue = row[4] ? row[4].trim() : '0';
 
-        // Очистка и преобразование USD в число
+        // Очистка и преобразование USD в число (ТОЧНОЕ ЗНАЧЕНИЕ)
         usdValue = parseFloat(usdValue.replace(/['"₽$,]/g, '').replace(/\s/g, ''));
-        usdValue = Math.round(usdValue); // <-- ОКРУГЛЕНИЕ ДЛЯ ИЗБЕЖАНИЯ ОШИБОК FLOAT
+        // Math.round(usdValue) УДАЛЕНО!
 
         if (group && !isNaN(usdValue) && group !== '') {
             aggregatedSales[group] = (aggregatedSales[group] || 0) + usdValue;
@@ -95,8 +95,9 @@ function parseTargetCSV(csvText) {
 
         // Очистка и преобразование USD (обрабатываем русские числа: 2 998,55 -> 2998.55)
         usdValue = usdValue.replace(/\./g, '').replace(/,/g, '.'); 
+        // ТОЧНОЕ ЗНАЧЕНИЕ
         usdValue = parseFloat(usdValue.replace(/['"₽$]/g, '').replace(/\s/g, ''));
-        usdValue = Math.round(usdValue); // <-- ОКРУГЛЕНИЕ ДЛЯ ИЗБЕЖАНИЯ ОШИБОК FLOAT
+        // Math.round(usdValue) УДАЛЕНО!
 
         if (group && !isNaN(usdValue) && group !== '') {
             aggregatedTarget[group] = (aggregatedTarget[group] || 0) + usdValue;
@@ -106,6 +107,7 @@ function parseTargetCSV(csvText) {
 }
 
 // Форматирование чисел (9 360 956)
+// *** ЗДЕСЬ ОСТАЕТСЯ ОКРУГЛЕНИЕ ДЛЯ ВИЗУАЛИЗАЦИИ! ***
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU').format(Math.round(num));
 }
@@ -226,7 +228,7 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        // Используем данные, которые уже были округлены при парсинге
+        // Используем ТОЧНЫЕ данные для расчетов
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;
 
@@ -248,15 +250,16 @@ function processData(combinedData) {
         `;
         tableBody.appendChild(row);
 
-        chartLabels.push(group);
+        chartLabels.push(target); // Для графика используем точные суммы
         chartTargets.push(target);
         chartSales.push(sales);
     }
 
-    // Обновление KPI и Итогов
+    // Обновление KPI и Итогов (используем ТОЧНЫЕ общие суммы)
     const totalExecution = (totalTarget === 0) ? 0 : totalSales / totalTarget;
     const totalDifference = totalTarget - totalSales;
 
+    // Везде используется formatNumber для ВИЗУАЛИЗАЦИИ
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
     document.getElementById('total-sales').textContent = formatNumber(totalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
@@ -306,7 +309,10 @@ function renderChart(labels, targetData, salesData) {
             plugins: {
                 title: { display: true, text: 'Target vs Sales по Группам' },
                 tooltip: {
-                    callbacks: { label: function(context) { return `${context.dataset.label}: ${formatNumber(context.raw)}`; } }
+                    callbacks: { label: function(context) { 
+                        // Округление для отображения в тултипе
+                        return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
+                    } }
                 }
             },
             scales: {
@@ -316,6 +322,7 @@ function renderChart(labels, targetData, salesData) {
                         callback: function(value) {
                             if (value >= 1000000) return (value / 1000000) + ' млн';
                             if (value >= 1000) return (value / 1000) + ' тыс.';
+                            // Здесь округление не нужно, так как Chart.js работает с точными суммами
                             return value;
                         }
                     }
