@@ -12,21 +12,52 @@ const SALES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk5
 
 // Парсинг и агрегация для ЛИСТА16 (Продажи)
 // Столбцы: ШипДате(0), Group(1), Class(2), Номенклатура.Парент(3), USD(4)
+function cleanGroup(groupName) {
+    if (!groupName) return '';
+
+    // 1. Убираем всё, что после скобок или тире, и переводим в верхний регистр.
+    let cleaned = groupName.toUpperCase()
+        .split('(')[0]
+        .split('-')[0]
+        .trim();
+
+    // 2. Исключаем чисто числовые строки (например, '024').
+    if (/^\d+$/.test(cleaned) || cleaned === '') {
+        return ''; 
+    }
+
+    // Разделяем очищенную строку на слова
+    const parts = cleaned.split(/\s+/); 
+
+    // 3. Возвращаем первое слово, если оно короткое (2-5 символов).
+    if (parts.length > 0 && parts[0].length > 1 && parts[0].length <= 5) {
+        return parts[0]; 
+    }
+
+    // 4. Иначе возвращаем очищенную строку целиком
+    return cleaned; 
+}
+
+
+// Парсинг и агрегация для ЛИСТА16 (Продажи)
+// Используются только Group(1) и USD(4)
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
-    // Надежное определение разделителя: проверяем, что чаще встречается в первой строке данных
+    // Надежное определение разделителя
     const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 5) continue;
+        if (row.length < 5) continue; // Проверка, что строка содержит как минимум 5 столбцов
 
-        // Используем исходное значение, переведенное в верхний регистр
-        const group = row[1] ? row[1].trim().toUpperCase() : ''; 
+        // Group: столбец 1
+        const rawGroup = row[1] ? row[1].trim() : ''; 
+        const group = cleanGroup(rawGroup);
 
+        // USD: столбец 4
         let usdValue = row[4] ? row[4].trim() : '0';
 
         // Очистка и преобразование USD в число
@@ -41,7 +72,7 @@ function parseSalesCSV(csvText) {
 
 
 // Парсинг и агрегация для ЛИСТА Target
-// Столбцы: Парент(0), Class(1), Group(2), USD(3)
+// Используются только Group(2) и USD(3)
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
@@ -52,11 +83,13 @@ function parseTargetCSV(csvText) {
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
 
-        if (row.length < 4) continue;
+        if (row.length < 4) continue; // Проверка, что строка содержит как минимум 4 столбца
 
-        // Используем исходное значение, переведенное в верхний регистр
-        const group = row[2] ? row[2].trim().toUpperCase() : '';
+        // Group: столбец 2
+        const rawGroup = row[2] ? row[2].trim() : '';
+        const group = cleanGroup(rawGroup);
 
+        // USD: столбец 3
         let usdValue = row[3] ? row[3].trim() : '0';
 
         // Очистка и преобразование USD (обрабатываем русские числа: 2 998,55 -> 2998.55)
