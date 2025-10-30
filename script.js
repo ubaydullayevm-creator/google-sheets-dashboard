@@ -21,16 +21,16 @@ function cleanGroup(groupName) {
         .trim();
 
     if (/^\d+$/.test(cleaned) || cleaned === '') {
-        return ''; 
+        return '';
     }
 
-    const parts = cleaned.split(/\s+/); 
+    const parts = cleaned.split(/\s+/);
 
     if (parts.length > 0 && parts[0].length > 1 && parts[0].length <= 5) {
-        return parts[0]; 
+        return parts[0];
     }
 
-    return cleaned; 
+    return cleaned;
 }
 
 /**
@@ -40,7 +40,7 @@ function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
     
     // 1. ЯВНО удаляем ВСЕ пробелы (разделители тысяч, включая неразрывный пробел)
-    let cleaned = rawString.replace(/\s/g, '').replace(/\u00A0/g, '').trim(); 
+    let cleaned = rawString.replace(/\s/g, '').replace(/\u00A0/g, '').trim();
     
     // 2. Удаляем знаки валют и другие символы
     cleaned = cleaned.replace(/['"₽$.]/g, '');
@@ -68,29 +68,29 @@ function cleanAndParseNumber(rawString) {
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
-    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
+    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ',';
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
-        if (row.length < 5) continue; 
+        if (row.length < 5) continue;
 
-        const rawGroup = row[1] ? row[1].trim() : ''; 
+        const rawGroup = row[1] ? row[1].trim() : '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = row[4] ? row[4].trim() : ''; 
+        const usdValueString = row[4] ? row[4].trim() : '';
         
-        if (usdValueString.trim() === '') continue; 
+        if (usdValueString.trim() === '') continue;
         
-        const usdValue = cleanAndParseNumber(usdValueString); 
+        const usdValue = cleanAndParseNumber(usdValueString);
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
-        if (!isNaN(usdValue) && usdValue !== 0) { 
+        if (!isNaN(usdValue) && usdValue !== 0) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
-             continue; 
+             continue;
         }
     }
-    return aggregatedSales; 
+    return aggregatedSales;
 }
 
 
@@ -98,47 +98,51 @@ function parseSalesCSV(csvText) {
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
-    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ','; 
+    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ',';
 
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(separator);
-        if (row.length < 4) continue; 
+        if (row.length < 4) continue;
 
         const rawGroup = row[2] ? row[2].trim() : '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = row[3] ? row[3].trim() : ''; 
+        const usdValueString = row[3] ? row[3].trim() : '';
 
-        if (usdValueString.trim() === '') continue; 
+        if (usdValueString.trim() === '') continue;
 
-        const usdValue = cleanAndParseNumber(usdValueString); 
+        const usdValue = cleanAndParseNumber(usdValueString);
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
-        if (!isNaN(usdValue) && usdValue !== 0) { 
+        if (!isNaN(usdValue) && usdValue !== 0) {
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
             continue;
         }
     }
-    return aggregatedTarget; 
+    return aggregatedTarget;
 }
 
-// Форматирование чисел (убрано ВСЁ округление, вывод с двумя знаками после запятой)
+// ========================================================================
+// === ИЗМЕНЕНИЯ ЗДЕСЬ: УДАЛЕНО ОГРАНИЧЕНИЕ НА КОЛИЧЕСТВО ДРОБНЫХ ЗНАКОВ ===
+// ========================================================================
+
+/**
+ * Форматирование чисел: Использует локаль, но без принудительного ограничения дробной части.
+ * Отобразит столько знаков, сколько есть в числе с плавающей запятой.
+ */
 function formatNumber(num) {
-    // Используем Intl.NumberFormat для форматирования с разделителями тысяч 
-    // и запятой для дробной части, с точностью до двух знаков.
-    return new Intl.NumberFormat('ru-RU', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(num); 
+    return new Intl.NumberFormat('ru-RU').format(num);
 }
 
-// Форматирование процентов (88,1%)
+/**
+ * Форматирование процентов: Использует локаль и стиль "percent", но без ограничения дробной части.
+ * Отобразит столько знаков, сколько есть в результате выполнения.
+ */
 function formatPercent(num) {
     return new Intl.NumberFormat('ru-RU', {
         style: 'percent',
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1
+        // Убраны minimumFractionDigits и maximumFractionDigits
     }).format(num);
 }
 
@@ -150,13 +154,13 @@ function getPercentClass(value) {
 }
 
 // ======================================================================================
-// === Основная логика загрузки и рендеринга ===
+// === Основная логика загрузки и рендеринга (остальное без изменений) ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     document.getElementById('last-update').textContent = now.toLocaleString('ru-RU', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     fetchData();
 });
@@ -205,7 +209,7 @@ function combineData(targets, sales) {
     const allGroups = new Set([...Object.keys(targets), ...Object.keys(sales)]);
 
     allGroups.forEach(group => {
-        if (group && group.trim() !== '') { 
+        if (group && group.trim() !== '') {
             combined[group] = {
                 target: targets[group] || 0,
                 sales: sales[group] || 0
@@ -221,7 +225,7 @@ function processData(combinedData) {
     let totalSales = 0;
 
     const tableBody = document.getElementById('data-table-body');
-    tableBody.innerHTML = ''; 
+    tableBody.innerHTML = '';
 
     const chartLabels = [];
     const chartTargets = [];
@@ -242,7 +246,7 @@ function processData(combinedData) {
     for (const group of sortedGroups) {
         const item = combinedData[group];
         // Важно: здесь мы используем точное число (включая дробную часть)
-        const target = Number(item.target) || 0; 
+        const target = Number(item.target) || 0;
         const sales = Number(item.sales) || 0;
 
         const execution = (target === 0) ? 0 : sales / target;
@@ -263,7 +267,7 @@ function processData(combinedData) {
         `;
         tableBody.appendChild(row);
 
-        chartLabels.push(group); 
+        chartLabels.push(group);
         chartTargets.push(target);
         chartSales.push(sales);
     }
@@ -292,7 +296,7 @@ function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
 
     if (window.myChart instanceof Chart) {
-        window.myChart.destroy(); 
+        window.myChart.destroy();
     }
 
     window.myChart = new Chart(ctx, {
@@ -303,14 +307,14 @@ function renderChart(labels, targetData, salesData) {
                 {
                     label: 'Target',
                     data: targetData,
-                    backgroundColor: '#d9534f', 
+                    backgroundColor: '#d9534f',
                     borderColor: '#d9534f',
                     borderWidth: 1
                 },
                 {
                     label: 'Sales',
                     data: salesData,
-                    backgroundColor: '#5bc0de', 
+                    backgroundColor: '#5bc0de',
                     borderColor: '#5bc0de',
                     borderWidth: 1
                 }
@@ -323,7 +327,8 @@ function renderChart(labels, targetData, salesData) {
                 title: { display: true, text: 'Target vs Sales по Группам' },
                 tooltip: {
                     callbacks: { label: function(context) { 
-                        return `${formatNumber(context.raw)}`; 
+                        // Используем новую функцию formatNumber для отображения полной точности
+                        return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
                     } }
                 }
             },
@@ -332,9 +337,9 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            if (value >= 1000000) return (value / 1000000) + ' млн';
-                            if (value >= 1000) return (value / 1000) + ' тыс.';
-                            return value;
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + ' млн';
+                            if (value >= 1000) return (value / 1000).toFixed(1) + ' тыс.';
+                            return formatNumber(value); // Используем formatNumber для точности
                         }
                     }
                 }
