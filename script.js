@@ -34,27 +34,36 @@ function cleanGroup(groupName) {
 }
 
 /**
- * Агрессивная очистка строки для parseFloat
- * Включает удаление управляющих символов и всех возможных разделителей.
- * @param {string} usdValueString - Сырая строка из CSV.
- * @returns {number} Преобразованное число.
+ * МАКСИМАЛЬНО АГРЕССИВНАЯ ОЧИСТКА для parseFloat.
+ * Улучшенная логика для сохранения дробной части.
  */
-function aggressivelyCleanAndParse(usdValueString) {
-    if (!usdValueString) return NaN;
+function cleanAndParseNumber(rawString) {
+    if (!rawString) return NaN;
     
-    // 1. Удаляем все управляющие/невидимые символы (например, BOM, переносы)
-    let cleanedString = usdValueString.replace(/[\uFEFF\r]/g, ''); 
+    // 1. ЯВНО удаляем ВСЕ пробелы (разделители тысяч, включая неразрывный пробел)
+    let cleaned = rawString.replace(/\s/g, '').replace(/\u00A0/g, '').trim(); 
     
-    // 2. Удаляем все пробелы (разделители тысяч)
-    cleanedString = cleanedString.replace(/\s/g, ''); 
+    // 2. Удаляем знаки валют и другие символы
+    cleaned = cleaned.replace(/['"₽$.]/g, '');
     
-    // 3. Удаляем точки, знаки валют и кавычки (точки как разделители тысяч)
-    cleanedString = cleanedString.replace(/['"₽$.]/g, ''); 
+    // 3. Заменяем запятые на точки (чтобы они были десятичным разделителем)
+    // Это критически важно для 287,06 -> 287.06
+    cleaned = cleaned.replace(/,/g, '.');
     
-    // 4. Заменяем запятые на точки (десятичный разделитель)
-    cleanedString = cleanedString.replace(/,/g, '.'); 
+    // 4. Окончательная очистка: удаляем все, кроме цифр, минуса и точки. 
+    // Это должно удалить "Bekabad" и другие текстовые символы.
+    cleaned = cleaned.replace(/[^-0-9.]/g, '');
     
-    return parseFloat(cleanedString);
+    // 5. Обрабатываем множественные точки (если разделители тысяч были точками)
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+        // Объединяем все части, кроме последней (дробной), удаляя точки-разделители тысяч
+        cleaned = parts.slice(0, -1).join('') + '.' + parts.slice(-1);
+    } else {
+        cleaned = parts.join('.');
+    }
+
+    return parseFloat(cleaned);
 }
 
 
@@ -70,17 +79,16 @@ function parseSalesCSV(csvText) {
 
         const rawGroup = row[1] ? row[1].trim() : ''; 
         const group = cleanGroup(rawGroup);
-        const usdValueString = row[4] ? row[4].trim() : '';
+        const usdValueString = row[4] ? row[4].trim() : ''; 
         
-        if (usdValueString.trim() === '') continue; // Пропускаем пустые строки
+        if (usdValueString.trim() === '') continue; 
         
-        const usdValue = aggressivelyCleanAndParse(usdValueString);
+        const usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
-        if (!isNaN(usdValue)) {
+        if (!isNaN(usdValue) && usdValue !== 0) { 
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
-        } else {
-             // 💡 ВЫВОД: Выводим нечисловые строки, но пропускаем их (НЕ добавляем 0)
+        } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
              continue; 
         }
@@ -103,15 +111,14 @@ function parseTargetCSV(csvText) {
         const group = cleanGroup(rawGroup);
         const usdValueString = row[3] ? row[3].trim() : ''; 
 
-        if (usdValueString.trim() === '') continue; // Пропускаем пустые строки
+        if (usdValueString.trim() === '') continue; 
 
-        const usdValue = aggressivelyCleanAndParse(usdValueString);
+        const usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
-        if (!isNaN(usdValue)) {
+        if (!isNaN(usdValue) && usdValue !== 0) { 
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
-        } else {
-            // 💡 ВЫВОД: Выводим нечисловые строки, но пропускаем их (НЕ добавляем 0)
+        } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
             continue;
         }
@@ -119,9 +126,12 @@ function parseTargetCSV(csvText) {
     return aggregatedTarget; 
 }
 
-// Форматирование чисел (9 360 956)
+// Форматирование чисел (убрано Math.round() для сохранения дробной части)
 function formatNumber(num) {
-    return new Intl.NumberFormat('ru-RU').format(Math.round(num)); 
+    // Округляем до двух знаков после запятой только для отображения, чтобы избежать 
+    // нежелательных длинных хвостов.
+    const roundedNum = parseFloat(num.toFixed(0)); // Округляем до целых для отображения на дашборде
+    return new Intl.NumberFormat('ru-RU').format(roundedNum); 
 }
 
 // Форматирование процентов (88,1%)
@@ -232,6 +242,7 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
+        // Важно: здесь мы используем точное число (включая дробную часть)
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;
 
@@ -262,6 +273,7 @@ function processData(combinedData) {
     const totalExecution = (totalTarget === 0) ? 0 : totalSales / totalTarget;
     const totalDifference = totalTarget - totalSales;
 
+    // Здесь отображаем полные, точные суммы
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
     document.getElementById('total-sales').textContent = formatNumber(totalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
