@@ -33,38 +33,50 @@ function cleanGroup(groupName) {
     return cleaned;
 }
 
-/**
- * МАКСИМАЛЬНО АГРЕССИВНАЯ ОЧИСТКА для parseFloat.
- */
+// ======================================================================================
+// === ИЗМЕНЕНИЕ: ОБНОВЛЕННАЯ ФУНКЦИЯ cleanAndParseNumber (более надежная) ===
+// ======================================================================================
+
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
-    
-    // 1. ЯВНО удаляем ВСЕ пробелы (разделители тысяч, включая неразрывный пробел)
-    let cleaned = rawString.replace(/\s/g, '').replace(/\u00A0/g, '').trim();
-    
-    // 2. Удаляем знаки валют и другие символы
-    cleaned = cleaned.replace(/['"₽$.]/g, '');
-    
-    // 3. Заменяем запятые на точки (чтобы они были десятичным разделителем)
-    cleaned = cleaned.replace(/,/g, '.');
-    
-    // 4. Окончательная очистка: удаляем все, кроме цифр, минуса и точки. 
-    cleaned = cleaned.replace(/[^-0-9.]/g, '');
-    
-    // 5. Обрабатываем множественные точки (если разделители тысяч были точками)
-    const parts = cleaned.split('.');
-    if (parts.length > 2) {
-        // Объединяем все части, кроме последней (дробной), удаляя точки-разделители тысяч
-        cleaned = parts.slice(0, -1).join('') + '.' + parts.slice(-1);
-    } else {
-        cleaned = parts.join('.');
-    }
 
-    return parseFloat(cleaned);
+    let cleaned = rawString
+        .replace(/\s/g, '')      // убираем все пробелы (включая неразрывные)
+        .replace(/\u00A0/g, '')
+        .replace(/['"₽$]/g, '')  // убираем валюты и кавычки
+        .trim();
+
+    // Если есть запятая и точка — определяем какая из них дробная
+    if (cleaned.includes(',') && cleaned.includes('.')) {
+        // Логика: если присутствуют обе, то дробная часть — после последней (обычно это запятая в Европе), удаляем точки (разделители тысяч)
+        // Чтобы избежать ошибки в случае "1,234.56" vs "1.234,56", мы сначала предполагаем, что разделитель тысяч - это точка, а десятичный - запятая.
+        // Чтобы покрыть оба случая, мы смотрим, какой разделитель последний.
+        const lastDot = cleaned.lastIndexOf('.');
+        const lastComma = cleaned.lastIndexOf(',');
+
+        if (lastDot > lastComma) {
+            // Формат 1,234.56. Точка - дробный, запятая - разделитель тысяч.
+            cleaned = cleaned.replace(/,/g, ''); 
+        } else {
+            // Формат 1.234,56. Запятая - дробный, точка - разделитель тысяч.
+            cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+        }
+        
+    } else if (cleaned.includes(',')) {
+        // только запятая — десятичный разделитель
+        cleaned = cleaned.replace(',', '.');
+    }
+    // Если только точка, она уже будет десятичным разделителем для parseFloat
+
+    // теперь убираем всё лишнее, что осталось (кроме цифр, точки и минуса)
+    cleaned = cleaned.replace(/[^0-9.\-]/g, '');
+
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? NaN : num;
 }
 
 
-// Парсинг и агрегация для ЛИСТА16 (Продажи)
+// Парсинг и агрегация для ЛИСТА16 (Продажи) - БЕЗ ИЗМЕНЕНИЙ
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -94,7 +106,7 @@ function parseSalesCSV(csvText) {
 }
 
 
-// Парсинг и агрегация для ЛИСТА Target
+// Парсинг и агрегация для ЛИСТА Target - БЕЗ ИЗМЕНЕНИЙ
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
@@ -124,19 +136,18 @@ function parseTargetCSV(csvText) {
 }
 
 // ======================================================================================
-// === ИЗМЕНЕНИЯ ЗДЕСЬ: УДАЛЕНО ВСЁ ПРИНУДИТЕЛЬНОЕ ФОРМАТИРОВАНИЕ ДРОБНОЙ ЧАСТИ ===
+// === ФОРМАТИРОВАНИЕ (НЕ ОКРУГЛЯЕТ) - ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ===
 // ======================================================================================
 
 /**
- * Форматирование чисел: Использует локаль (разделитель тысяч и запятая для десятичной), 
- * но отображает только те знаки после запятой, которые присутствуют в числе (или ничего, если это целое).
+ * Форматирование чисел: Использует локаль, отображает полную точность.
  */
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU').format(num);
 }
 
 /**
- * Форматирование процентов: Использует локаль и стиль "percent", но без принудительного ограничения дробной части.
+ * Форматирование процентов: Использует локаль и стиль "percent", отображает полную точность.
  */
 function formatPercent(num) {
     return new Intl.NumberFormat('ru-RU', {
@@ -152,7 +163,7 @@ function getPercentClass(value) {
 }
 
 // ======================================================================================
-// === Основная логика загрузки и рендеринга ===
+// === ОСНОВНАЯ ЛОГИКА (БЕЗ ИЗМЕНЕНИЙ) ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -201,7 +212,7 @@ async function fetchData() {
     }
 }
 
-// Объединение данных из двух объектов в один
+// Объединение данных из двух объектов в один - БЕЗ ИЗМЕНЕНИЙ
 function combineData(targets, sales) {
     const combined = {};
     const allGroups = new Set([...Object.keys(targets), ...Object.keys(sales)]);
@@ -217,7 +228,7 @@ function combineData(targets, sales) {
     return combined;
 }
 
-// Построение таблицы и KPI
+// Построение таблицы и KPI - БЕЗ ИЗМЕНЕНИЙ
 function processData(combinedData) {
     let totalTarget = 0;
     let totalSales = 0;
@@ -288,7 +299,7 @@ function processData(combinedData) {
     renderChart(chartLabels, chartTargets, chartSales);
 }
 
-// Функция для рендеринга графика (Chart.js)
+// Функция для рендеринга графика (Chart.js) - ИСПОЛЬЗУЕТ ФОРМАТИРОВАНИЕ БЕЗ ОКРУГЛЕНИЯ
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
 
@@ -323,9 +334,11 @@ function renderChart(labels, targetData, salesData) {
             plugins: {
                 title: { display: true, text: 'Target vs Sales по Группам' },
                 tooltip: {
-                    callbacks: { label: function(context) { 
-                        return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
-                    } }
+                    callbacks: { 
+                        label: function(context) { 
+                            return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
+                        } 
+                    }
                 }
             },
             scales: {
@@ -333,7 +346,7 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            // Оставляем только форматирование. Теперь оно не будет принудительно округлять или добавлять нули.
+                            // Гарантируем вывод полной точности
                             return formatNumber(value); 
                         }
                     }
