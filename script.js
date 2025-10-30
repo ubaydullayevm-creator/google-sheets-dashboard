@@ -123,26 +123,24 @@ function parseTargetCSV(csvText) {
     return aggregatedTarget;
 }
 
-// ========================================================================
-// === ИЗМЕНЕНИЯ ЗДЕСЬ: УДАЛЕНО ОГРАНИЧЕНИЕ НА КОЛИЧЕСТВО ДРОБНЫХ ЗНАКОВ ===
-// ========================================================================
+// ======================================================================================
+// === ИЗМЕНЕНИЯ ЗДЕСЬ: УДАЛЕНО ВСЁ ПРИНУДИТЕЛЬНОЕ ФОРМАТИРОВАНИЕ ДРОБНОЙ ЧАСТИ ===
+// ======================================================================================
 
 /**
- * Форматирование чисел: Использует локаль, но без принудительного ограничения дробной части.
- * Отобразит столько знаков, сколько есть в числе с плавающей запятой.
+ * Форматирование чисел: Использует локаль (разделитель тысяч и запятая для десятичной), 
+ * но отображает только те знаки после запятой, которые присутствуют в числе (или ничего, если это целое).
  */
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU').format(num);
 }
 
 /**
- * Форматирование процентов: Использует локаль и стиль "percent", но без ограничения дробной части.
- * Отобразит столько знаков, сколько есть в результате выполнения.
+ * Форматирование процентов: Использует локаль и стиль "percent", но без принудительного ограничения дробной части.
  */
 function formatPercent(num) {
     return new Intl.NumberFormat('ru-RU', {
         style: 'percent',
-        // Убраны minimumFractionDigits и maximumFractionDigits
     }).format(num);
 }
 
@@ -154,7 +152,7 @@ function getPercentClass(value) {
 }
 
 // ======================================================================================
-// === Основная логика загрузки и рендеринга (остальное без изменений) ===
+// === Основная логика загрузки и рендеринга ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -245,7 +243,6 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        // Важно: здесь мы используем точное число (включая дробную часть)
         const target = Number(item.target) || 0;
         const sales = Number(item.sales) || 0;
 
@@ -327,7 +324,6 @@ function renderChart(labels, targetData, salesData) {
                 title: { display: true, text: 'Target vs Sales по Группам' },
                 tooltip: {
                     callbacks: { label: function(context) { 
-                        // Используем новую функцию formatNumber для отображения полной точности
                         return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
                     } }
                 }
@@ -337,9 +333,8 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            if (value >= 1000000) return (value / 1000000).toFixed(1) + ' млн';
-                            if (value >= 1000) return (value / 1000).toFixed(1) + ' тыс.';
-                            return formatNumber(value); // Используем formatNumber для точности
+                            // Оставляем только форматирование. Теперь оно не будет принудительно округлять или добавлять нули.
+                            return formatNumber(value); 
                         }
                     }
                 }
