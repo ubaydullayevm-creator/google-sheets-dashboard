@@ -35,7 +35,6 @@ function cleanGroup(groupName) {
 
 /**
  * МАКСИМАЛЬНО АГРЕССИВНАЯ ОЧИСТКА для parseFloat.
- * Улучшенная логика для сохранения дробной части.
  */
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
@@ -47,11 +46,9 @@ function cleanAndParseNumber(rawString) {
     cleaned = cleaned.replace(/['"₽$.]/g, '');
     
     // 3. Заменяем запятые на точки (чтобы они были десятичным разделителем)
-    // Это критически важно для 287,06 -> 287.06
     cleaned = cleaned.replace(/,/g, '.');
     
     // 4. Окончательная очистка: удаляем все, кроме цифр, минуса и точки. 
-    // Это должно удалить "Bekabad" и другие текстовые символы.
     cleaned = cleaned.replace(/[^-0-9.]/g, '');
     
     // 5. Обрабатываем множественные точки (если разделители тысяч были точками)
@@ -126,12 +123,14 @@ function parseTargetCSV(csvText) {
     return aggregatedTarget; 
 }
 
-// Форматирование чисел (убрано Math.round() для сохранения дробной части)
+// Форматирование чисел (убрано ВСЁ округление, вывод с двумя знаками после запятой)
 function formatNumber(num) {
-    // Округляем до двух знаков после запятой только для отображения, чтобы избежать 
-    // нежелательных длинных хвостов.
-    const roundedNum = parseFloat(num.toFixed(0)); // Округляем до целых для отображения на дашборде
-    return new Intl.NumberFormat('ru-RU').format(roundedNum); 
+    // Используем Intl.NumberFormat для форматирования с разделителями тысяч 
+    // и запятой для дробной части, с точностью до двух знаков.
+    return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(num); 
 }
 
 // Форматирование процентов (88,1%)
