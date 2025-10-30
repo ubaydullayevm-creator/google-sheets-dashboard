@@ -35,12 +35,14 @@ function cleanGroup(groupName) {
 
 /**
  * Агрессивная очистка строки для parseFloat
- * ДОБАВЛЕНО: удаление управляющих символов и невидимых разделителей.
+ * Включает удаление управляющих символов и всех возможных разделителей.
+ * @param {string} usdValueString - Сырая строка из CSV.
+ * @returns {number} Преобразованное число.
  */
 function aggressivelyCleanAndParse(usdValueString) {
     if (!usdValueString) return NaN;
     
-    // 1. Удаляем все управляющие/невидимые символы (например, Byte Order Mark или лишние переносы)
+    // 1. Удаляем все управляющие/невидимые символы (например, BOM, переносы)
     let cleanedString = usdValueString.replace(/[\uFEFF\r]/g, ''); 
     
     // 2. Удаляем все пробелы (разделители тысяч)
@@ -77,8 +79,11 @@ function parseSalesCSV(csvText) {
 
         if (!isNaN(usdValue)) {
             aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue;
-        } 
-        // Нечисловые строки (NaN) просто пропускаются (continue), как в старом рабочем коде.
+        } else {
+             // 💡 ВЫВОД: Выводим нечисловые строки, но пропускаем их (НЕ добавляем 0)
+             console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
+             continue; 
+        }
     }
     return aggregatedSales; 
 }
@@ -98,15 +103,18 @@ function parseTargetCSV(csvText) {
         const group = cleanGroup(rawGroup);
         const usdValueString = row[3] ? row[3].trim() : ''; 
 
-        if (usdValueString.trim() === '') continue; // Пропускаем пустые строки (как Raw USD="")
-        
+        if (usdValueString.trim() === '') continue; // Пропускаем пустые строки
+
         const usdValue = aggressivelyCleanAndParse(usdValueString);
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue)) {
             aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
-        } 
-        // Нечисловые строки (NaN, как "Bekabad") просто пропускаются (continue), как в старом рабочем коде.
+        } else {
+            // 💡 ВЫВОД: Выводим нечисловые строки, но пропускаем их (НЕ добавляем 0)
+            console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
+            continue;
+        }
     }
     return aggregatedTarget; 
 }
