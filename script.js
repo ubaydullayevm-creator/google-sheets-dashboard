@@ -34,7 +34,7 @@ function cleanGroup(groupName) {
 }
 
 /**
- * Надежный парсинг чисел, корректно обрабатывающий европейский формат.
+ * Надежный парсинг чисел: преобразует '123,45' в 123.45.
  */
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
@@ -47,7 +47,7 @@ function cleanAndParseNumber(rawString) {
 
     if (cleaned === '') return NaN;
     
-    // ЭТО ГАРАНТИРУЕТ, ЧТО '123,45' ПРЕОБРАЗУЕТСЯ В 123.45
+    // Преобразование европейского формата
     if (cleaned.includes(',') && cleaned.includes('.')) {
         cleaned = cleaned.replace(/\./g, '').replace(',', '.');
     } else if (cleaned.includes(',')) {
@@ -59,7 +59,7 @@ function cleanAndParseNumber(rawString) {
 }
 
 /**
- * Исправляет ошибки точности чисел с плавающей запятой в JavaScript (финансовая точность).
+ * Исправляет ошибки точности чисел с плавающей запятой в JavaScript.
  */
 function roundToPrecision(num, precision = 10) {
     if (Math.abs(num) < 1e-10) return 0;
@@ -69,12 +69,9 @@ function roundToPrecision(num, precision = 10) {
 
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ (ВОЗВРАЩЕНО C ГАРАНТИЕЙ 2 ЗНАКОВ ПОСЛЕ ЗАПЯТОЙ) ===
-// ======================================================================================
+// === ФОРМАТИРОВАНИЕ (С гарантией 2-х знаков) ===
+// ... (formatNumber, formatPercent, getPercentClass - без изменений) ...
 
-/**
- * Форматирование чисел: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
- */
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 2, 
@@ -82,9 +79,6 @@ function formatNumber(num) {
     }).format(num);
 }
 
-/**
- * Форматирование процентов: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
- */
 function formatPercent(num) {
     return new Intl.NumberFormat('ru-RU', {
         style: 'percent',
@@ -101,7 +95,7 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (Логика суммирования с коррекцией точности) ===
+// === ПАРСИНГ CSV (С УСИЛЕННОЙ АГРЕГАЦИЕЙ) ===
 // ======================================================================================
 
 function parseSalesCSV(csvText) {
@@ -124,8 +118,12 @@ function parseSalesCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedSales[key] || 0;
-            // roundToPrecision ГАРАНТИРУЕТ, что 0.5 + 0.5 = 1.0, а не 0.9999999999999999
-            aggregatedSales[key] = roundToPrecision(currentSum + usdValue); 
+            // ЯВНОЕ ПРЕОБРАЗОВАНИЕ К ЧИСЛУ ПЕРЕД СУММИРОВАНИЕМ (для безопасности)
+            let currentNum = Number(currentSum);
+            let valueNum = Number(usdValue); 
+            
+            // roundToPrecision применяется к сумме
+            aggregatedSales[key] = roundToPrecision(currentNum + valueNum); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
              continue;
@@ -156,7 +154,11 @@ function parseTargetCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedTarget[key] || 0;
-            aggregatedTarget[key] = roundToPrecision(currentSum + usdValue);
+            // ЯВНОЕ ПРЕОБРАЗОВАНИЕ К ЧИСЛУ ПЕРЕД СУММИРОВАНИЕМ (для безопасности)
+            let currentNum = Number(currentSum);
+            let valueNum = Number(usdValue);
+            
+            aggregatedTarget[key] = roundToPrecision(currentNum + valueNum);
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
             continue;
@@ -170,7 +172,7 @@ function parseTargetCSV(csvText) {
 
 // ======================================================================================
 // === ОСНОВНАЯ ЛОГИКА ===
-// ======================================================================================
+// ... (fetchData, combineData, processData, renderChart - без изменений) ...
 
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
@@ -181,12 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function fetchData() {
-    if (TARGET_CSV_URL.includes('ВАШ_СВЕЖИЙ_URL_ДЛЯ_TARGET') || SALES_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_SALES_URL')) {
+    if (TARGET_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_TARGET_URL') || SALES_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_SALES_URL')) {
         console.error('Критическая ошибка: Обновите URL-адреса Google Sheets в script.js, используя свежие ссылки.');
         alert('Критическая ошибка: Обновите URL-адреса в файле script.js.');
         return;
     }
-    // ... (Остальной код fetch/processData) ...
+
     try {
         console.log('Начало загрузки данных с Google...');
 
