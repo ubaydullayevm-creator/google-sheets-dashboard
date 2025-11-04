@@ -34,7 +34,7 @@ function cleanGroup(groupName) {
 }
 
 /**
- * Надежный парсинг чисел, корректно обрабатывающий европейский формат (пробел как тысячи, запятая как дробный).
+ * Надежный парсинг чисел, корректно обрабатывающий европейский формат.
  */
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
@@ -67,7 +67,30 @@ function roundToPrecision(num, precision = 10) {
 }
 
 // ======================================================================================
-// === ПАРСИНГ CSV (Добавлен вывод агрегированных сумм) ===
+// === ФОРМАТИРОВАНИЕ: УДАЛЕНЫ formatNumber и formatPercent. ===
+// ======================================================================================
+
+// УДАЛЕНО: function formatNumber(num) { ... }
+// УДАЛЕНО: function formatPercent(num) { ... }
+
+/**
+ * Вспомогательная функция для форматирования процентов без Intl.NumberFormat.
+ * Просто умножает на 100 и добавляет знак %.
+ */
+function formatRawPercent(num) {
+    // num - это число, например, 1.042
+    return (num * 100).toFixed(6) + '%'; // Используем toFixed(6) для видимой точности
+}
+
+// Определение класса CSS для цвета %
+function getPercentClass(value) {
+    if (value >= 1) return 'percent-good';
+    if (value >= 0.85) return 'percent-ok';
+    return 'percent-bad';
+}
+
+// ======================================================================================
+// === ПАРСИНГ CSV (Логика суммирования с коррекцией точности) ===
 // ======================================================================================
 
 // Парсинг и агрегация для ЛИСТА16 (Продажи)
@@ -91,14 +114,12 @@ function parseSalesCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedSales[key] || 0;
-            // Суммирование с коррекцией точности
             aggregatedSales[key] = roundToPrecision(currentSum + usdValue); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
              continue;
         }
     }
-    // === ВЫВОД В КОНСОЛЬ АГРЕГИРОВАННЫХ ПРОДАЖ ===
     console.log('--- АГРЕГИРОВАННЫЕ ПРОДАЖИ (ДО ФОРМАТИРОВАНИЯ) ---');
     console.log(aggregatedSales);
     return aggregatedSales;
@@ -126,39 +147,24 @@ function parseTargetCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedTarget[key] || 0;
-            // Суммирование с коррекцией точности
             aggregatedTarget[key] = roundToPrecision(currentSum + usdValue);
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
             continue;
         }
     }
-    // === ВЫВОД В КОНСОЛЬ АГРЕГИРОВАННЫХ ЦЕЛЕЙ ===
     console.log('--- АГРЕГИРОВАННЫЕ ЦЕЛИ (ДО ФОРМАТИРОВАНИЯ) ---');
     console.log(aggregatedTarget);
     return aggregatedTarget;
 }
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ И ОСНОВНАЯ ЛОГИКА ===
+// === ОСНОВНАЯ ЛОГИКА (Отображение сырых чисел) ===
 // ======================================================================================
-
-function formatNumber(num) {
-    return new Intl.NumberFormat('ru-RU').format(num);
-}
-
-function formatPercent(num) {
-    return new Intl.NumberFormat('ru-RU', { style: 'percent' }).format(num);
-}
-
-function getPercentClass(value) {
-    if (value >= 1) return 'percent-good';
-    if (value >= 0.85) return 'percent-ok';
-    return 'percent-bad';
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
+    // Используем toLocaleString только для даты
     document.getElementById('last-update').textContent = now.toLocaleString('ru-RU', {
         day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
@@ -190,13 +196,13 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
         
-        // === ДОБАВЛЕНО ДЛЯ ОТЛАДКИ РАЗНИЦЫ В СУММАХ ===
+        // ВЫВОД ДЛЯ ОТЛАДКИ РАСХОЖДЕНИЙ
         const salesLines = salesCSV.split('\n').filter(line => line.trim() !== '');
         console.log('--- ПРОВЕРКА ИСХОДНЫХ ДАННЫХ SALES ---');
         console.log(`Количество строк в Sales CSV: ${salesLines.length - 1} (без заголовка)`);
         console.log(`Первые 500 символов Sales CSV: \n${salesCSV.substring(0, 500)}...`);
         console.log('-------------------------------------------');
-        // ============================================
+        
 
         const targets = parseTargetCSV(targetCSV);
         const sales = parseSalesCSV(salesCSV);
@@ -259,19 +265,26 @@ function processData(combinedData) {
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
 
-        // Суммирование общих итогов с коррекцией
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
+        
+        // --- ПРЕДОСТВРАЩАЕМ ПРОБЛЕМУ ТОЧНОСТИ ОТОБРАЖЕНИЯ ---
+        // Используем toFixed(6) для отображения в HTML, чтобы увидеть дробную часть.
+        const targetDisplay = target.toFixed(6);
+        const salesDisplay = sales.toFixed(6);
+        const diffDisplay = difference.toFixed(6);
+        const executionDisplay = formatRawPercent(execution);
+        // ----------------------------------------------------
 
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
         row.innerHTML = `
             <td>${group}</td>
-            <td class="align-right">${formatNumber(target)}</td>
-            <td class="align-right">${formatNumber(sales)}</td>
-            <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
-            <td class="align-right">${formatNumber(difference)}</td>
+            <td class="align-right">${targetDisplay}</td>
+            <td class="align-right">${salesDisplay}</td>
+            <td class="align-right ${percentClass}">${executionDisplay}</td>
+            <td class="align-right">${diffDisplay}</td>
         `;
         tableBody.appendChild(row);
 
@@ -280,32 +293,40 @@ function processData(combinedData) {
         chartSales.push(sales);
     }
 
-    // Обновление KPI и Итогов (корректируем финальные расчеты)
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const totalDifference = roundToPrecision(totalTarget - totalSales);
 
-    // === ВЫВОД В КОНСОЛЬ ОБЩИХ ИТОГОВ ===
+    // --- ВЫВОД ИТОГОВ С МАКСИМАЛЬНОЙ ТОЧНОСТЬЮ ---
+    const totalTargetDisplay = totalTarget.toFixed(6);
+    const totalSalesDisplay = totalSales.toFixed(6);
+    const totalDiffDisplay = totalDifference.toFixed(6);
+    const totalExecutionDisplay = formatRawPercent(totalExecution);
+    // ---------------------------------------------
+
+
+    // ВЫВОД В КОНСОЛЬ ОБЩИХ ИТОГОВ
     console.log('--- ОБЩИЕ ИТОГИ (ДО ФОРМАТИРОВАНИЯ) ---');
     console.log(`Total Target (Number): ${totalTarget}`);
     console.log(`Total Sales (Number): ${totalSales}`);
     console.log(`Total Execution (Number): ${totalExecution}`);
     console.log('-------------------------------------------');
 
-    // Здесь отображаем полные, точные суммы
-    document.getElementById('total-target').textContent = formatNumber(totalTarget);
-    document.getElementById('total-sales').textContent = formatNumber(totalSales);
-    document.getElementById('total-percent').textContent = formatPercent(totalExecution);
+    // Обновление HTML с использованием сырых, высокоточных чисел
+    document.getElementById('total-target').textContent = totalTargetDisplay;
+    document.getElementById('total-sales').textContent = totalSalesDisplay;
+    document.getElementById('total-percent').textContent = totalExecutionDisplay;
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
-    document.getElementById('footer-target').textContent = formatNumber(totalTarget);
-    document.getElementById('footer-sales').textContent = formatNumber(totalSales);
-    document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
+    document.getElementById('footer-target').textContent = totalTargetDisplay;
+    document.getElementById('footer-sales').textContent = totalSalesDisplay;
+    document.getElementById('footer-percent').textContent = totalExecutionDisplay;
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
-    document.getElementById('footer-diff').textContent = formatNumber(totalDifference);
+    document.getElementById('footer-diff').textContent = totalDiffDisplay;
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
 
+// Функция для рендеринга графика (Chart.js)
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
 
@@ -342,7 +363,8 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { 
                         label: function(context) { 
-                            return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
+                            // Используем сырую строку с точкой и точностью
+                            return `${context.dataset.label}: ${context.raw.toFixed(6)}`; 
                         } 
                     }
                 }
@@ -352,7 +374,8 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatNumber(value); 
+                            // Используем сырую строку с точкой и точностью
+                            return value.toFixed(6); 
                         }
                     }
                 }
