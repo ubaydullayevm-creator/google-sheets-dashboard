@@ -8,10 +8,6 @@ const TARGET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk
 // URL-адрес CSV для листа "Лист16" (должен быть получен через Файл -> Опубликовать в интернете)
 const SALES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk5hOpz8tnYmIm_zhrSQrAS8mZXzlCcUbQMrMdJ0BJ17cuXjlegDAUK7Nequl8tu2JWpznwFE/pub?gid=407492630&single=true&output=csv';
 
-// --- ФУНКЦИЯ cleanGroup УДАЛЕНА СОГЛАСНО ВАШЕМУ ЗАПРОСУ ---
-
-// Парсинг и агрегация для ЛИСТА16 (Продажи)
-// Столбцы: ШипДате(0), Group(1), Class(2), Номенклатура.Парент(3), USD(4)
 function cleanGroup(groupName) {
     if (!groupName) return '';
 
@@ -48,10 +44,7 @@ function cleanAndParseNumber(rawString) {
         .replace(/\u00A0/g, '')       // Удаляем неразрывные пробелы
         .replace(/[^\d,\.\-]/g, '');  // Удаляем все, КРОМЕ цифр, запятой, точки и минуса
 
-    if (cleaned === '') {
-        console.log(`[ПАРСЕР ЧИСЕЛ] Исходная: "${rawString}" -> Обработанная: "" -> Результат: NaN`);
-        return NaN;
-    }
+    if (cleaned === '') return NaN;
     
     // 2. Стандартизация: преобразуем европейский формат "X,YY" в "X.YY"
     if (cleaned.includes(',')) {
@@ -64,15 +57,11 @@ function cleanAndParseNumber(rawString) {
     }
 
     const num = parseFloat(cleaned);
-    
-    // !!! КРИТИЧЕСКИЙ ВЫВОД ДЛЯ ОТЛАДКИ !!!
-    console.log(`[ПАРСЕР ЧИСЕЛ] Исходная: "${rawString}" -> Обработанная: "${cleaned}" -> Результат: ${num}`);
-
     return isNaN(num) ? NaN : num;
 }
 
 /**
- * Исправляет ошибки точности чисел с плавающей запятой в JavaScript 
+ * ОБЯЗАТЕЛЬНО: Исправляет ошибки точности чисел с плавающей запятой в JavaScript 
  * и округляет до двух знаков после запятой для финального суммирования.
  */
 function roundToPrecision(num, precision = 12) {
@@ -88,27 +77,39 @@ function roundToPrecision(num, precision = 12) {
 
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ (С гарантией 2-х знаков после запятой) ===
+// === ФОРМАТИРОВАНИЕ (ДВЕ ВЕРСИИ) ===
 // ======================================================================================
 
 /**
- * Форматирование чисел: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
+ * Форматирование чисел: Используется для KPI (Target/Sales Projection). 
+ * Выводит ЦЕЛЫЕ числа (0 знаков после запятой), как вы просили.
  */
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU', {
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 10,
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0,
     }).format(num);
 }
 
 /**
- * Форматирование процентов: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
+ * Форматирование чисел: Используется для ТАБЛИЦЫ и ГРАФИКОВ. 
+ * Выводит 2 знака после запятой, чтобы вы могли проверить точность.
+ */
+function formatNumberWithDecimals(num) {
+    return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2,
+    }).format(num);
+}
+
+/**
+ * Форматирование процентов.
  */
 function formatPercent(num) {
     return new Intl.NumberFormat('ru-RU', {
         style: 'percent',
         minimumFractionDigits: 2,
-        maximumFractionDigits: 10,
+        maximumFractionDigits: 2,
     }).format(num);
 }
 
@@ -120,37 +121,35 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (СУММИРОВАНИЕ) ===
+// === ПАРСИНГ CSV (УСИЛЕННЫЙ) ===
 // ======================================================================================
 
-// Пожалуйста, замените только эту функцию в вашем файле script.js
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
     for (let i = 1; i < lines.length; i++) {
-        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем регулярное выражение !!!
-        // Это гарантирует, что запятые внутри кавычек (как в "2,66") не будут разделять столбцы.
+        // УСИЛЕННЫЙ ПАРСИНГ: Игнорирует запятые внутри кавычек
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
         // Индексы столбцов: Group (1), USD (4)
         if (row.length < 5) continue;
 
-        // Очищаем каждый элемент массива от лишних пробелов и кавычек, если они есть
+        // Очищаем каждый элемент массива от лишних пробелов и кавычек
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
 
         const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = cleanRow[4] || ''; // Индекс 4 теперь гарантированно USD
+        const usdValueString = cleanRow[4] || ''; 
         
         if (usdValueString.trim() === '') continue;
         
-        // Теперь на вход cleanAndParseNumber пойдет строка типа "2,66" или "3530,57"
         const usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedSales[key] || 0;
+            // Использование roundToPrecision для точного суммирования
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${cleanRow[4]}".`);
@@ -159,15 +158,13 @@ function parseSalesCSV(csvText) {
     }
     return aggregatedSales;
 }
-// Повторите то же самое для parseTargetCSV, убрав из нее лишние логи.
 
-// Пожалуйста, замените эту функцию также, чтобы обеспечить корректный парсинг для Target
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
     for (let i = 1; i < lines.length; i++) {
-        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем регулярное выражение !!!
+        // УСИЛЕННЫЙ ПАРСИНГ: Игнорирует запятые внутри кавычек
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
         // Индексы столбцов: Group (2), USD (3)
@@ -177,7 +174,7 @@ function parseTargetCSV(csvText) {
 
         const rawGroup = cleanRow[2] || '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = cleanRow[3] || ''; // Индекс 3 теперь гарантированно USD
+        const usdValueString = cleanRow[3] || '';
 
         if (usdValueString.trim() === '') continue;
 
@@ -186,6 +183,7 @@ function parseTargetCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedTarget[key] || 0;
+            // Использование roundToPrecision для точного суммирования
             aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${cleanRow[3]}".`);
@@ -194,6 +192,7 @@ function parseTargetCSV(csvText) {
     }
     return aggregatedTarget;
 }
+
 
 // ======================================================================================
 // === ОСНОВНАЯ ЛОГИКА И ВЫВОД ===
@@ -304,10 +303,10 @@ function processData(combinedData) {
 
         row.innerHTML = `
             <td>${group}</td>
-            <td class="align-right">${formatNumber(target)}</td>
-            <td class="align-right">${formatNumber(sales)}</td>
+            <td class="align-right">${formatNumberWithDecimals(target)}</td>
+            <td class="align-right">${formatNumberWithDecimals(sales)}</td>
             <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
-            <td class="align-right">${formatNumber(difference)}</td>
+            <td class="align-right">${formatNumberWithDecimals(difference)}</td>
         `;
         tableBody.appendChild(row);
 
@@ -320,16 +319,18 @@ function processData(combinedData) {
     const totalDifference = roundToPrecision(totalTarget - totalSales);
 
     // Обновление HTML
+    // ИСПОЛЬЗУЕМ formatNumber для целых чисел в KPI (Target/Sales Projection)
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
     document.getElementById('total-sales').textContent = formatNumber(totalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
-    document.getElementById('footer-target').textContent = formatNumber(totalTarget);
-    document.getElementById('footer-sales').textContent = formatNumber(totalSales);
+    // ИСПОЛЬЗУЕМ formatNumberWithDecimals для футера таблицы
+    document.getElementById('footer-target').textContent = formatNumberWithDecimals(totalTarget);
+    document.getElementById('footer-sales').textContent = formatNumberWithDecimals(totalSales);
     document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
-    document.getElementById('footer-diff').textContent = formatNumber(totalDifference);
+    document.getElementById('footer-diff').textContent = formatNumberWithDecimals(totalDifference);
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
@@ -370,7 +371,8 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { 
                         label: function(context) { 
-                            return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
+                            // Всплывающие подсказки тоже используем с 2 знаками
+                            return `${context.dataset.label}: ${formatNumberWithDecimals(context.raw)}`; 
                         } 
                     }
                 }
@@ -380,7 +382,8 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatNumber(value); 
+                            // Ось Y используем с 2 знаками
+                            return formatNumberWithDecimals(value); 
                         }
                     }
                 }
