@@ -17,6 +17,7 @@ function cleanGroup(groupName) {
         .trim();
 
     if (/^\d+$/.test(cleaned) || cleaned === '') {
+        // Пустая или состоящая только из цифр группа возвращается как пустая строка
         return '';
     }
 
@@ -30,8 +31,7 @@ function cleanGroup(groupName) {
 }
 
 /**
- * КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Преобразует европейский разделитель '123,45' в 123.45 
- * и обеспечивает максимальную очистку.
+ * Преобразует европейский разделитель '123,45' в 123.45 и обеспечивает очистку.
  */
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
@@ -48,11 +48,9 @@ function cleanAndParseNumber(rawString) {
     
     // 2. Стандартизация: преобразуем европейский формат "X,YY" в "X.YY"
     if (cleaned.includes(',')) {
-        // Если есть и запятая, и точка (разделители тысяч), убираем точки
         if (cleaned.includes('.')) {
             cleaned = cleaned.replace(/\./g, '');
         }
-        // Заменяем запятую на точку
         cleaned = cleaned.replace(',', '.'); 
     }
 
@@ -61,16 +59,14 @@ function cleanAndParseNumber(rawString) {
 }
 
 /**
- * ОБЯЗАТЕЛЬНО: Исправляет ошибки точности чисел с плавающей запятой в JavaScript 
- * и округляет до двух знаков после запятой для финального суммирования.
+ * Исправляет ошибки точности чисел с плавающей запятой в JavaScript.
  */
 function roundToPrecision(num, precision = 12) {
-    // Шаг 1: Исправляем ошибки точности
     if (Math.abs(num) < 1e-10) return 0;
     const factor = Math.pow(10, precision);
     const correctedNum = Math.round(num * factor) / factor;
     
-    // Шаг 2: Округляем до двух знаков после запятой для финальной суммы (внутреннее хранение)
+    // Округляем до двух знаков после запятой для внутренней точности
     const finalFactor = 100;
     return Math.round(correctedNum * finalFactor) / finalFactor; 
 }
@@ -82,25 +78,15 @@ function roundToPrecision(num, precision = 12) {
 
 /**
  * Форматирование чисел: Используется ВЕЗДЕ.
- * Выводит ЦЕЛЫЕ числа (0 знаков после запятой), так как мы уже округлили их
- * в функции parseCSV.
+ * Выводит ЦЕЛЫЕ числа (0 знаков после запятой).
  */
-// Используется для KPI (Target/Sales Projection) - ЦЕЛЫЕ ЧИСЛА
-// Используется для вывода ЦЕЛЫХ чисел (везде, включая группы и итог)
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0,
     }).format(num);
 }
-// Убедитесь, что formatNumberWithDecimals удалена или не используется!
-// Используется для Таблицы - С ДВУМЯ ЗНАКАМИ
-function formatNumberWithDecimals(num) {
-    return new Intl.NumberFormat('ru-RU', {
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2,
-    }).format(num);
-}
+
 /**
  * Форматирование процентов.
  */
@@ -120,17 +106,18 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (УСИЛЕННЫЙ И С ОКРУГЛЕНИЕМ СТРОК) ===
+// === ПАРСИНГ CSV (СУММИРУЕМ ДРОБНЫЕ ЧИСЛА) ===
 // ======================================================================================
 
-// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
     for (let i = 1; i < lines.length; i++) {
+        // УСИЛЕННЫЙ ПАРСИНГ
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
+        // Индексы столбцов: Group (1), USD (4)
         if (row.length < 5) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
@@ -142,13 +129,12 @@ function parseSalesCSV(csvText) {
         if (usdValueString.trim() === '') continue;
         
         let usdValue = cleanAndParseNumber(usdValueString); 
+        // Если cleanGroup вернула пустую строку, используем UNGROUPED_SALES
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // !!! ИСПРАВЛЕНИЕ: Удаляем Math.round() - суммируем дробные числа !!!
-            // usdValue = Math.round(usdValue); 
-            
             let currentSum = aggregatedSales[key] || 0;
+            // Суммируем ДРОБНЫЕ числа
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${cleanRow[4]}".`);
@@ -158,14 +144,15 @@ function parseSalesCSV(csvText) {
     return aggregatedSales;
 }
 
-// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
     for (let i = 1; i < lines.length; i++) {
+        // УСИЛЕННЫЙ ПАРСИНГ
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
+        // Индексы столбцов: Group (2), USD (3)
         if (row.length < 4) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
@@ -177,13 +164,12 @@ function parseTargetCSV(csvText) {
         if (usdValueString.trim() === '') continue;
 
         let usdValue = cleanAndParseNumber(usdValueString); 
+        // Если cleanGroup вернула пустую строку, используем UNGROUPED_TARGET
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // !!! ИСПРАВЛЕНИЕ: Удаляем Math.round() - суммируем дробные числа !!!
-            // usdValue = Math.round(usdValue);
-            
             let currentSum = aggregatedTarget[key] || 0;
+            // Суммируем ДРОБНЫЕ числа
             aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${cleanRow[3]}".`);
@@ -195,7 +181,7 @@ function parseTargetCSV(csvText) {
 
 
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (Используем formatNumber ВЕЗДЕ) ===
+// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (ГДЕ РЕШАЕТСЯ ПРОБЛЕМА ТОТАЛА) ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -207,6 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function fetchData() {
+    // ... (проверка URL и загрузка CSV) ...
+
     if (TARGET_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_TARGET_URL') || SALES_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_SALES_URL')) {
         console.error('Критическая ошибка: Обновите URL-адреса Google Sheets в script.js, используя свежие ссылки.');
         alert('Критическая ошибка: Обновите URL-адреса в файле script.js.');
@@ -267,52 +255,66 @@ function combineData(targets, sales) {
 
 
 function processData(combinedData) {
+    // 1. ПЕРЕМЕННЫЕ ДЛЯ ТОЧНОГО РАСЧЕТА % (Суммируем дробные числа)
     let totalTarget = 0; 
     let totalSales = 0;   
     
-    // Переменные для вывода в ТОТАЛ (Сумма округленных групп)
+    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные суммы групп)
     let displayTotalTarget = 0;
     let displayTotalSales = 0;
     
     const tableBody = document.getElementById('data-table-body');
     tableBody.innerHTML = '';
 
-    // ... (инициализация графиков) ...
+    const chartLabels = [];
+    const chartTargets = [];
+    const chartSales = [];
 
     const sortedGroups = Object.keys(combinedData).sort((a, b) => {
-        // ... (сортировка) ...
+        return combinedData[b].target - combinedData[a].target;
     });
 
-    // ... (проверка на пустые данные) ...
+    if (sortedGroups.length === 0) {
+        console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг не дал результатов.');
+        return;
+    }
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
+        // Дробные значения группы, пришедшие из парсера
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;     
         
-        // A. Обновление точных сумм для расчета процента (включая TIER)
+        // A. Обновление точных сумм для расчета процента (включая все группы)
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
 
-        // B. Округление суммы группы для вывода в таблицу
+        // B. Округление суммы группы до целого числа (для отображения)
         const roundedTarget = Math.round(target); 
         const roundedSales = Math.round(sales);     
         
         // C. Обновление сумм для вывода ТОТАЛА
-        // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: ИСКЛЮЧАЕМ TIER ИЗ ОБЩЕГО ИТОГА !!!
-        if (group.toUpperCase() !== 'TIER') {
-            displayTotalTarget += roundedTarget; 
-            displayTotalSales += roundedSales;   
+        // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: ИСКЛЮЧАЕМ TIER И ВСЕ СЛУЖЕБНЫЕ/НУЛЕВЫЕ ГРУППЫ ИЗ ОБЩЕГО ИТОГА !!!
+        const groupKey = group.toUpperCase();
+        
+        // Группы, которые не должны идти в KPI, но могут отображаться в таблице
+        const isExcludedGroup = groupKey === 'TIER' || 
+                                groupKey.startsWith('UNGROUPED') ||
+                                (roundedTarget === 0 && roundedSales === 0);
+        
+        if (!isExcludedGroup) {
+            displayTotalTarget += roundedTarget; // СУММА ОКРУГЛЕННЫХ
+            displayTotalSales += roundedSales;   // СУММА ОКРУГЛЕННЫХ
         }
         // !!!
 
+        // D. Отображение в таблице (строка TIER будет видна, но не включена в Total)
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
 
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
-        // В таблице показываем строку TIER
         row.innerHTML = `
             <td>${group}</td>
             <td class="align-right">${formatNumber(roundedTarget)}</td> 
@@ -322,23 +324,24 @@ function processData(combinedData) {
         `;
         tableBody.appendChild(row);
 
-        // ... (обновление данных для графика) ...
+        chartLabels.push(group);
+        chartTargets.push(target);
+        chartSales.push(sales);
     }
     
-    // ... (расчет и обновление HTML, используем displayTotalTarget/Sales) ...
-
+    // РАСЧЕТ ИТОГОВ ДЛЯ ВЫВОДА
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const displayTotalDifference = displayTotalTarget - displayTotalSales; 
     
     // Обновление HTML (KPI)
-    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget); 
-    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);     
+    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);     // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
     // Обновление футера
-    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget); 
-    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);   
+    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);   // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
     document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
     document.getElementById('footer-diff').textContent = formatNumber(displayTotalDifference);
@@ -382,7 +385,6 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { 
                         label: function(context) { 
-                            // Всплывающие подсказки тоже используем целые числа
                             return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
                         } 
                     }
@@ -393,7 +395,6 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            // Ось Y используем целые числа
                             return formatNumber(value); 
                         }
                     }
