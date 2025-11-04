@@ -118,22 +118,29 @@ function getPercentClass(value) {
 // === ПАРСИНГ CSV (СУММИРОВАНИЕ) ===
 // ======================================================================================
 
+// Пожалуйста, замените только эту функцию в вашем файле script.js
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
-    const separator = ','; 
 
     for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(separator); 
+        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем регулярное выражение !!!
+        // Это гарантирует, что запятые внутри кавычек (как в "2,66") не будут разделять столбцы.
+        const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
+        // Индексы столбцов: Group (1), USD (4)
         if (row.length < 5) continue;
 
-        const rawGroup = row[1] ? row[1].trim() : '';
+        // Очищаем каждый элемент массива от лишних пробелов и кавычек, если они есть
+        const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
+
+        const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = row[4] ? row[4].trim() : '';
+        const usdValueString = cleanRow[4] || ''; // Индекс 4 теперь гарантированно USD
         
         if (usdValueString.trim() === '') continue;
         
+        // Теперь на вход cleanAndParseNumber пойдет строка типа "2,66" или "3530,57"
         const usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
@@ -141,29 +148,31 @@ function parseSalesCSV(csvText) {
             let currentSum = aggregatedSales[key] || 0;
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
-             console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${row[4]}".`);
+             console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${cleanRow[4]}".`);
              continue;
         }
     }
     return aggregatedSales;
 }
-
 // Повторите то же самое для parseTargetCSV, убрав из нее лишние логи.
 
+// Пожалуйста, замените эту функцию также, чтобы обеспечить корректный парсинг для Target
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
-    const separator = ','; // Принудительно запятая
 
     for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(separator); 
+        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем регулярное выражение !!!
+        const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов: Group=2, USD=3
+        // Индексы столбцов: Group (2), USD (3)
         if (row.length < 4) continue;
 
-        const rawGroup = row[2] ? row[2].trim() : '';
+        const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
+
+        const rawGroup = cleanRow[2] || '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = row[3] ? row[3].trim() : '';
+        const usdValueString = cleanRow[3] || ''; // Индекс 3 теперь гарантированно USD
 
         if (usdValueString.trim() === '') continue;
 
@@ -174,13 +183,12 @@ function parseTargetCSV(csvText) {
             let currentSum = aggregatedTarget[key] || 0;
             aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
-            console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${row[3]}".`);
+            console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${cleanRow[3]}".`);
             continue;
         }
     }
     return aggregatedTarget;
 }
-
 
 // ======================================================================================
 // === ОСНОВНАЯ ЛОГИКА И ВЫВОД ===
