@@ -267,47 +267,44 @@ function combineData(targets, sales) {
 
 
 function processData(combinedData) {
-    // 1. ПЕРЕМЕННЫЕ ДЛЯ ТОЧНОГО РАСЧЕТА % (Суммируем дробные числа)
     let totalTarget = 0; 
     let totalSales = 0;   
     
-    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные суммы групп)
+    // Переменные для вывода в ТОТАЛ (Сумма округленных групп)
     let displayTotalTarget = 0;
     let displayTotalSales = 0;
     
     const tableBody = document.getElementById('data-table-body');
     tableBody.innerHTML = '';
 
-    const chartLabels = [];
-    const chartTargets = [];
-    const chartSales = [];
+    // ... (инициализация графиков) ...
 
     const sortedGroups = Object.keys(combinedData).sort((a, b) => {
-        return combinedData[b].target - combinedData[a].target;
+        // ... (сортировка) ...
     });
 
-    if (sortedGroups.length === 0) {
-        console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг не дал результатов.');
-        return;
-    }
+    // ... (проверка на пустые данные) ...
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        // Дробные значения группы, пришедшие из парсера
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;     
         
-        // A. Обновление точных сумм для расчета процента
+        // A. Обновление точных сумм для расчета процента (включая TIER)
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
 
-        // B. Округление суммы группы до целого числа (например, 4318194.53 -> 4318195)
+        // B. Округление суммы группы для вывода в таблицу
         const roundedTarget = Math.round(target); 
         const roundedSales = Math.round(sales);     
         
         // C. Обновление сумм для вывода ТОТАЛА
-        displayTotalTarget += roundedTarget; // <--- КЛЮЧЕВАЯ ЛИНИЯ: СУММА ОКРУГЛЕННЫХ
-        displayTotalSales += roundedSales;   // <--- КЛЮЧЕВАЯ ЛИНИЯ: СУММА ОКРУГЛЕННЫХ
+        // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: ИСКЛЮЧАЕМ TIER ИЗ ОБЩЕГО ИТОГА !!!
+        if (group.toUpperCase() !== 'TIER') {
+            displayTotalTarget += roundedTarget; 
+            displayTotalSales += roundedSales;   
+        }
+        // !!!
 
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
@@ -315,7 +312,7 @@ function processData(combinedData) {
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
-        // В таблице используем округленные суммы групп
+        // В таблице показываем строку TIER
         row.innerHTML = `
             <td>${group}</td>
             <td class="align-right">${formatNumber(roundedTarget)}</td> 
@@ -325,24 +322,23 @@ function processData(combinedData) {
         `;
         tableBody.appendChild(row);
 
-        chartLabels.push(group);
-        chartTargets.push(target);
-        chartSales.push(sales);
+        // ... (обновление данных для графика) ...
     }
     
-    // РАСЧЕТ ИТОГОВ ДЛЯ ВЫВОДА
+    // ... (расчет и обновление HTML, используем displayTotalTarget/Sales) ...
+
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const displayTotalDifference = displayTotalTarget - displayTotalSales; 
     
     // Обновление HTML (KPI)
-    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
-    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);   // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget); 
+    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);     
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
     // Обновление футера
-    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
-    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);   // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget); 
+    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);   
     document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
     document.getElementById('footer-diff').textContent = formatNumber(displayTotalDifference);
