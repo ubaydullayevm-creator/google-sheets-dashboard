@@ -349,31 +349,6 @@ function processData(combinedData) {
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
-    
-    // !!! ТЕСТИРОВАНИЕ !!!
-    console.log(`[ФИНАЛЬНЫЙ ИТОГ TARGET - ДЛЯ ДИСПЛЕЯ]: ${displayTotalTarget}`);
-
-    const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
-    
-    // Обновление HTML (KPI)
-    // ИСПОЛЬЗУЕМ displayTotalTarget и displayTotalSales для вывода
-    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget);
-    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);
-    document.getElementById('total-percent').textContent = formatPercent(totalExecution);
-    document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
-
-    // Общий difference рассчитываем на основе displayTotal, чтобы он тоже был целым.
-    const displayTotalDifference = displayTotalTarget - displayTotalSales; 
-    
-    // ИСПОЛЬЗУЕМ displayTotalTarget и displayTotalSales для футера
-    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget);
-    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);
-    document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
-    document.getElementById('footer-percent').className = getPercentClass(totalExecution);
-    document.getElementById('footer-diff').textContent = formatNumber(displayTotalDifference);
-
-    renderChart(chartLabels, chartTargets, chartSales);
-}
 
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
