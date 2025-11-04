@@ -72,13 +72,18 @@ function cleanAndParseNumber(rawString) {
 }
 
 /**
- * ОБЯЗАТЕЛЬНО: Исправляет ошибки точности чисел с плавающей запятой в JavaScript 
- * (предотвращает 0.1 + 0.2 = 0.30000000000000004).
+ * Исправляет ошибки точности чисел с плавающей запятой в JavaScript 
+ * и округляет до двух знаков после запятой для финального суммирования.
  */
-function roundToPrecision(num, precision = 10) {
+function roundToPrecision(num, precision = 12) {
+    // Шаг 1: Исправляем ошибки точности
     if (Math.abs(num) < 1e-10) return 0;
     const factor = Math.pow(10, precision);
-    return Math.round(num * factor) / factor;
+    const correctedNum = Math.round(num * factor) / factor;
+    
+    // Шаг 2: Округляем до двух знаков после запятой для финальной суммы (внутреннее хранение)
+    const finalFactor = 100;
+    return Math.round(correctedNum * finalFactor) / finalFactor; 
 }
 
 
