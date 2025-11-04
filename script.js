@@ -84,6 +84,7 @@ function roundToPrecision(num, precision = 12) {
  * Форматирование чисел: Используется для KPI (Target/Sales Projection). 
  * Выводит ЦЕЛЫЕ числа (0 знаков после запятой), как вы просили.
  */
+// Используется для KPI (Target/Sales Projection)
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 0, 
@@ -91,14 +92,11 @@ function formatNumber(num) {
     }).format(num);
 }
 
-/**
- * Форматирование чисел: Используется для ТАБЛИЦЫ и ГРАФИКОВ. 
- * Выводит 2 знака после запятой, чтобы вы могли проверить точность.
- */
+// Используется для строк таблицы и футера
 function formatNumberWithDecimals(num) {
     return new Intl.NumberFormat('ru-RU', {
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0, // Также ставим 0, чтобы соответствовать новой логике суммирования
+        maximumFractionDigits: 0, 
     }).format(num);
 }
 
@@ -124,6 +122,7 @@ function getPercentClass(value) {
 // === ПАРСИНГ CSV (УСИЛЕННЫЙ) ===
 // ======================================================================================
 
+// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -144,12 +143,14 @@ function parseSalesCSV(csvText) {
         
         if (usdValueString.trim() === '') continue;
         
-        const usdValue = cleanAndParseNumber(usdValueString); 
-        const key = group === '' ? 'UNGROUPED_SALES' : group;
-
+        let usdValue = cleanAndParseNumber(usdValueString); 
+        
         if (!isNaN(usdValue) && usdValue !== 0) {
+            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем каждый элемент до целого числа (0 знаков) !!!
+            usdValue = Math.round(usdValue); 
+            
             let currentSum = aggregatedSales[key] || 0;
-            // Использование roundToPrecision для точного суммирования
+            // Теперь суммируем целые числа
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${cleanRow[4]}".`);
@@ -159,6 +160,7 @@ function parseSalesCSV(csvText) {
     return aggregatedSales;
 }
 
+// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
@@ -178,12 +180,15 @@ function parseTargetCSV(csvText) {
 
         if (usdValueString.trim() === '') continue;
 
-        const usdValue = cleanAndParseNumber(usdValueString); 
+        let usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
+            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем каждый элемент до целого числа (0 знаков) !!!
+            usdValue = Math.round(usdValue);
+            
             let currentSum = aggregatedTarget[key] || 0;
-            // Использование roundToPrecision для точного суммирования
+            // Теперь суммируем целые числа
             aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${cleanRow[3]}".`);
