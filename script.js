@@ -48,7 +48,10 @@ function cleanAndParseNumber(rawString) {
         .replace(/\u00A0/g, '')       // Удаляем неразрывные пробелы
         .replace(/[^\d,\.\-]/g, '');  // Удаляем все, КРОМЕ цифр, запятой, точки и минуса
 
-    if (cleaned === '') return NaN;
+    if (cleaned === '') {
+        console.log(`[ПАРСЕР ЧИСЕЛ] Исходная: "${rawString}" -> Обработанная: "" -> Результат: NaN`);
+        return NaN;
+    }
     
     // 2. Стандартизация: преобразуем европейский формат "X,YY" в "X.YY"
     if (cleaned.includes(',')) {
@@ -61,6 +64,10 @@ function cleanAndParseNumber(rawString) {
     }
 
     const num = parseFloat(cleaned);
+    
+    // !!! КРИТИЧЕСКИЙ ВЫВОД ДЛЯ ОТЛАДКИ !!!
+    console.log(`[ПАРСЕР ЧИСЕЛ] Исходная: "${rawString}" -> Обработанная: "${cleaned}" -> Результат: ${num}`);
+
     return isNaN(num) ? NaN : num;
 }
 
@@ -114,13 +121,11 @@ function getPercentClass(value) {
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
-    const separator = ','; // Принудительно запятая, как разделитель столбцов
+    const separator = ','; 
 
     for (let i = 1; i < lines.length; i++) {
-        // УПРОЩЕННЫЙ SPLIT: Зависит от того, что данные столбцов не содержат лишних запятых
         const row = lines[i].split(separator); 
         
-        // Индексы столбцов: Group=1, USD=4
         if (row.length < 5) continue;
 
         const rawGroup = row[1] ? row[1].trim() : '';
@@ -142,6 +147,8 @@ function parseSalesCSV(csvText) {
     }
     return aggregatedSales;
 }
+
+// Повторите то же самое для parseTargetCSV, убрав из нее лишние логи.
 
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
