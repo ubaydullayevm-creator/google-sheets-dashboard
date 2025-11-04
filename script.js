@@ -268,9 +268,14 @@ function combineData(targets, sales) {
 
 
 function processData(combinedData) {
-    let totalTarget = 0;
-    let totalSales = 0;
-
+    let totalTarget = 0; // Для расчета точного процента (дробные)
+    let totalSales = 0;    // Для расчета точного процента (дробные)
+    
+    // !!! НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Сумма округленных групп) !!!
+    let displayTotalTarget = 0;
+    let displayTotalSales = 0;
+    // !!!
+    
     const tableBody = document.getElementById('data-table-body');
     tableBody.innerHTML = '';
 
@@ -289,24 +294,34 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        const target = Number(item.target) || 0;
-        const sales = Number(item.sales) || 0;
+        const target = Number(item.target) || 0; // Дробное значение группы
+        const sales = Number(item.sales) || 0;     // Дробное значение группы
+        
+        // --- Шаг 1: Расчет итогов для % (дробные) ---
+        totalTarget = roundToPrecision(totalTarget + target);
+        totalSales = roundToPrecision(totalSales + sales);
+
+        // --- Шаг 2: Расчет итогов для ДИСПЛЕЯ (сумма округленных групп) ---
+        const roundedTarget = Math.round(target); // Округляем сумму группы (4318194.53 -> 4318195)
+        const roundedSales = Math.round(sales);     // Округляем сумму группы
+        
+        displayTotalTarget += roundedTarget; // Суммируем округленное
+        displayTotalSales += roundedSales;   // Суммируем округленное
+        // ---
 
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
 
-        totalTarget = roundToPrecision(totalTarget + target);
-        totalSales = roundToPrecision(totalSales + sales);
-
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
+        // В таблице показываем округленные суммы групп (целые числа)
         row.innerHTML = `
             <td>${group}</td>
-            <td class="align-right">${formatNumber(target)}</td>
-            <td class="align-right">${formatNumber(sales)}</td>
+            <td class="align-right">${formatNumber(roundedTarget)}</td> 
+            <td class="align-right">${formatNumber(roundedSales)}</td>  
             <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
-            <td class="align-right">${formatNumber(difference)}</td>
+            <td class="align-right">${formatNumber(Math.round(difference))}</td>
         `;
         tableBody.appendChild(row);
 
@@ -314,21 +329,28 @@ function processData(combinedData) {
         chartTargets.push(target);
         chartSales.push(sales);
     }
+    
+    // !!! ТЕСТИРОВАНИЕ !!!
+    console.log(`[ФИНАЛЬНЫЙ ИТОГ TARGET - ДЛЯ ДИСПЛЕЯ]: ${displayTotalTarget}`);
 
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
-    const totalDifference = roundToPrecision(totalTarget - totalSales);
-
-    // Обновление HTML (KPI и футер)
-    document.getElementById('total-target').textContent = formatNumber(totalTarget);
-    document.getElementById('total-sales').textContent = formatNumber(totalSales);
+    
+    // Обновление HTML (KPI)
+    // ИСПОЛЬЗУЕМ displayTotalTarget и displayTotalSales для вывода
+    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget);
+    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
-    document.getElementById('footer-target').textContent = formatNumber(totalTarget);
-    document.getElementById('footer-sales').textContent = formatNumber(totalSales);
+    // Общий difference рассчитываем на основе displayTotal, чтобы он тоже был целым.
+    const displayTotalDifference = displayTotalTarget - displayTotalSales; 
+    
+    // ИСПОЛЬЗУЕМ displayTotalTarget и displayTotalSales для футера
+    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget);
+    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);
     document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
-    document.getElementById('footer-diff').textContent = formatNumber(totalDifference);
+    document.getElementById('footer-diff').textContent = formatNumber(displayTotalDifference);
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
