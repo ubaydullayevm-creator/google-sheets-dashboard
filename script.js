@@ -34,24 +34,30 @@ function cleanGroup(groupName) {
 }
 
 /**
- * Надежный парсинг чисел: преобразует '123,45' в 123.45.
+ * КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Преобразует европейский разделитель '123,45' в 123.45 
+ * и обеспечивает максимальную очистку.
  */
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
 
+    // 1. Очистка и удаление лишних символов
     let cleaned = rawString
-        .replace(/[^0-9,\.\-\s]/g, '')
-        .replace(/\s/g, '')
-        .replace(/\u00A0/g, '')
-        .trim();
+        .trim()
+        .replace(/^"|"$/g, '')        // Удаляем внешние кавычки (из-за CSV)
+        .replace(/\s/g, '')            // Удаляем все пробелы
+        .replace(/\u00A0/g, '')       // Удаляем неразрывные пробелы
+        .replace(/[^\d,\.\-]/g, '');  // Удаляем все, КРОМЕ цифр, запятой, точки и минуса
 
     if (cleaned === '') return NaN;
     
-    // Преобразование европейского формата
-    if (cleaned.includes(',') && cleaned.includes('.')) {
-        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    } else if (cleaned.includes(',')) {
-        cleaned = cleaned.replace(',', '.');
+    // 2. Стандартизация: преобразуем европейский формат "X,YY" в "X.YY"
+    if (cleaned.includes(',')) {
+        // Если есть и запятая, и точка (разделители тысяч), убираем точки
+        if (cleaned.includes('.')) {
+            cleaned = cleaned.replace(/\./g, '');
+        }
+        // Заменяем запятую на точку
+        cleaned = cleaned.replace(',', '.'); 
     }
 
     const num = parseFloat(cleaned);
@@ -59,7 +65,8 @@ function cleanAndParseNumber(rawString) {
 }
 
 /**
- * Исправляет ошибки точности чисел с плавающей запятой в JavaScript.
+ * ОБЯЗАТЕЛЬНО: Исправляет ошибки точности чисел с плавающей запятой в JavaScript 
+ * (предотвращает 0.1 + 0.2 = 0.30000000000000004).
  */
 function roundToPrecision(num, precision = 10) {
     if (Math.abs(num) < 1e-10) return 0;
@@ -69,9 +76,12 @@ function roundToPrecision(num, precision = 10) {
 
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ (С гарантией 2-х знаков) ===
-// ... (formatNumber, formatPercent, getPercentClass - без изменений) ...
+// === ФОРМАТИРОВАНИЕ (С гарантией 2-х знаков после запятой) ===
+// ======================================================================================
 
+/**
+ * Форматирование чисел: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
+ */
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 2, 
@@ -79,6 +89,9 @@ function formatNumber(num) {
     }).format(num);
 }
 
+/**
+ * Форматирование процентов: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
+ */
 function formatPercent(num) {
     return new Intl.NumberFormat('ru-RU', {
         style: 'percent',
@@ -95,16 +108,19 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (С УСИЛЕННОЙ АГРЕГАЦИЕЙ) ===
+// === ПАРСИНГ CSV (СУММИРОВАНИЕ) ===
 // ======================================================================================
 
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
-    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ',';
+    const separator = ','; // Принудительно запятая, как разделитель столбцов
 
     for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(separator);
+        // УПРОЩЕННЫЙ SPLIT: Зависит от того, что данные столбцов не содержат лишних запятых
+        const row = lines[i].split(separator); 
+        
+        // Индексы столбцов: Group=1, USD=4
         if (row.length < 5) continue;
 
         const rawGroup = row[1] ? row[1].trim() : '';
@@ -118,29 +134,24 @@ function parseSalesCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedSales[key] || 0;
-            // ЯВНОЕ ПРЕОБРАЗОВАНИЕ К ЧИСЛУ ПЕРЕД СУММИРОВАНИЕМ (для безопасности)
-            let currentNum = Number(currentSum);
-            let valueNum = Number(usdValue); 
-            
-            // roundToPrecision применяется к сумме
-            aggregatedSales[key] = roundToPrecision(currentNum + valueNum); 
+            aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
-             console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
+             console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${row[4]}".`);
              continue;
         }
     }
-    console.log('--- АГРЕГИРОВАННЫЕ ПРОДАЖИ (ДО ФОРМАТИРОВАНИЯ) ---');
-    console.log(aggregatedSales);
     return aggregatedSales;
 }
 
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
-    const separator = (lines.length > 1 && lines[1].split(';').length > 1) ? ';' : ',';
+    const separator = ','; // Принудительно запятая
 
     for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(separator);
+        const row = lines[i].split(separator); 
+        
+        // Индексы столбцов: Group=2, USD=3
         if (row.length < 4) continue;
 
         const rawGroup = row[2] ? row[2].trim() : '';
@@ -154,25 +165,19 @@ function parseTargetCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedTarget[key] || 0;
-            // ЯВНОЕ ПРЕОБРАЗОВАНИЕ К ЧИСЛУ ПЕРЕД СУММИРОВАНИЕМ (для безопасности)
-            let currentNum = Number(currentSum);
-            let valueNum = Number(usdValue);
-            
-            aggregatedTarget[key] = roundToPrecision(currentNum + valueNum);
+            aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
-            console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
+            console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${row[3]}".`);
             continue;
         }
     }
-    console.log('--- АГРЕГИРОВАННЫЕ ЦЕЛИ (ДО ФОРМАТИРОВАНИЯ) ---');
-    console.log(aggregatedTarget);
     return aggregatedTarget;
 }
 
 
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА ===
-// ... (fetchData, combineData, processData, renderChart - без изменений) ...
+// === ОСНОВНАЯ ЛОГИКА И ВЫВОД ===
+// ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
@@ -197,8 +202,6 @@ async function fetchData() {
             fetch(SALES_CSV_URL)
         ]);
         
-        // ... (Проверка ошибок и загрузка CSV) ...
-
         if (!targetResponse.ok || !salesResponse.ok) {
             const status = !targetResponse.ok ? targetResponse.status : salesResponse.status;
             console.error(`КРИТИЧЕСКАЯ ОШИБКА СЕТИ. Статус: ${status}.`);
@@ -209,7 +212,6 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
         
-        // ВЫВОД ДЛЯ ОТЛАДКИ РАСХОЖДЕНИЙ
         const salesLines = salesCSV.split('\n').filter(line => line.trim() !== '');
         console.log('--- ПРОВЕРКА ИСХОДНЫХ ДАННЫХ SALES ---');
         console.log(`Количество строк в Sales CSV: ${salesLines.length - 1} (без заголовка)`);
@@ -246,14 +248,12 @@ function combineData(targets, sales) {
 }
 
 
-// Построение таблицы и KPI
 function processData(combinedData) {
     let totalTarget = 0;
     let totalSales = 0;
 
     const tableBody = document.getElementById('data-table-body');
     tableBody.innerHTML = '';
-    // ... (Создание таблицы) ...
 
     const chartLabels = [];
     const chartTargets = [];
@@ -265,11 +265,8 @@ function processData(combinedData) {
 
     if (sortedGroups.length === 0) {
         console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг не дал результатов.');
-        alert('Данные не загружены. Проверьте форматирование в Google Sheets.');
         return;
     }
-
-    console.log(`Успех! Обнаружено ${sortedGroups.length} групп для отображения.`);
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
@@ -302,13 +299,6 @@ function processData(combinedData) {
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const totalDifference = roundToPrecision(totalTarget - totalSales);
 
-    // ВЫВОД В КОНСОЛЬ ОБЩИХ ИТОГОВ
-    console.log('--- ОБЩИЕ ИТОГИ (ДО ФОРМАТИРОВАНИЯ) ---');
-    console.log(`Total Target (Number): ${totalTarget}`);
-    console.log(`Total Sales (Number): ${totalSales}`);
-    console.log(`Total Execution (Number): ${totalExecution}`);
-    console.log('-------------------------------------------');
-
     // Обновление HTML
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
     document.getElementById('total-sales').textContent = formatNumber(totalSales);
@@ -330,7 +320,7 @@ function renderChart(labels, targetData, salesData) {
     if (window.myChart instanceof Chart) {
         window.myChart.destroy();
     }
-    // ... (Код графика) ...
+    
     window.myChart = new Chart(ctx, {
         type: 'bar',
         data: {
