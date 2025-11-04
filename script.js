@@ -85,13 +85,23 @@ function roundToPrecision(num, precision = 12) {
  * Выводит ЦЕЛЫЕ числа (0 знаков после запятой), так как мы уже округлили их
  * в функции parseCSV.
  */
+// Используется для KPI (Target/Sales Projection) - ЦЕЛЫЕ ЧИСЛА
 function formatNumber(num) {
+    // Округляем финальное число перед отображением
+    const roundedNum = Math.round(num); 
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0,
-    }).format(num);
+    }).format(roundedNum);
 }
 
+// Используется для Таблицы - С ДВУМЯ ЗНАКАМИ
+function formatNumberWithDecimals(num) {
+    return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2,
+    }).format(num);
+}
 /**
  * Форматирование процентов.
  */
@@ -114,18 +124,16 @@ function getPercentClass(value) {
 // === ПАРСИНГ CSV (УСИЛЕННЫЙ И С ОКРУГЛЕНИЕМ СТРОК) ===
 // ======================================================================================
 
+// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
 
     for (let i = 1; i < lines.length; i++) {
-        // УСИЛЕННЫЙ ПАРСИНГ: Игнорирует запятые внутри кавычек
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов: Group (1), USD (4)
         if (row.length < 5) continue;
 
-        // Очищаем каждый элемент массива от лишних пробелов и кавычек
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
 
         const rawGroup = cleanRow[1] || '';
@@ -138,11 +146,10 @@ function parseSalesCSV(csvText) {
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем КАЖДУЮ СТРОКУ до целого числа !!!
-            usdValue = Math.round(usdValue); 
+            // !!! ИСПРАВЛЕНИЕ: Удаляем Math.round() - суммируем дробные числа !!!
+            // usdValue = Math.round(usdValue); 
             
             let currentSum = aggregatedSales[key] || 0;
-            // Теперь суммируем целые числа
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${cleanRow[4]}".`);
@@ -152,15 +159,14 @@ function parseSalesCSV(csvText) {
     return aggregatedSales;
 }
 
+// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
     for (let i = 1; i < lines.length; i++) {
-        // УСИЛЕННЫЙ ПАРСИНГ: Игнорирует запятые внутри кавычек
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов: Group (2), USD (3)
         if (row.length < 4) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
@@ -175,11 +181,10 @@ function parseTargetCSV(csvText) {
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем КАЖДУЮ СТРОКУ до целого числа !!!
-            usdValue = Math.round(usdValue);
+            // !!! ИСПРАВЛЕНИЕ: Удаляем Math.round() - суммируем дробные числа !!!
+            // usdValue = Math.round(usdValue);
             
             let currentSum = aggregatedTarget[key] || 0;
-            // Теперь суммируем целые числа
             aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${cleanRow[3]}".`);
