@@ -33,6 +33,9 @@ function cleanGroup(groupName) {
     return cleaned;
 }
 
+/**
+ * Надежный парсинг чисел, корректно обрабатывающий европейский формат (пробел как тысячи, запятая как дробный).
+ */
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
 
@@ -162,8 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchData();
 });
 
-// ... (fetchData и combineData без изменений) ...
-
 async function fetchData() {
     if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
         console.error('Ошибка: Не обновлены URL-адреса Google Sheets в script.js.');
@@ -188,6 +189,14 @@ async function fetchData() {
 
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
+        
+        // === ДОБАВЛЕНО ДЛЯ ОТЛАДКИ РАЗНИЦЫ В СУММАХ ===
+        const salesLines = salesCSV.split('\n').filter(line => line.trim() !== '');
+        console.log('--- ПРОВЕРКА ИСХОДНЫХ ДАННЫХ SALES ---');
+        console.log(`Количество строк в Sales CSV: ${salesLines.length - 1} (без заголовка)`);
+        console.log(`Первые 500 символов Sales CSV: \n${salesCSV.substring(0, 500)}...`);
+        console.log('-------------------------------------------');
+        // ============================================
 
         const targets = parseTargetCSV(targetCSV);
         const sales = parseSalesCSV(salesCSV);
@@ -296,8 +305,6 @@ function processData(combinedData) {
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
-
-// ... (renderChart и setInterval без изменений) ...
 
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
