@@ -86,15 +86,14 @@ function roundToPrecision(num, precision = 12) {
  * в функции parseCSV.
  */
 // Используется для KPI (Target/Sales Projection) - ЦЕЛЫЕ ЧИСЛА
+// Используется для вывода ЦЕЛЫХ чисел (везде, включая группы и итог)
 function formatNumber(num) {
-    // Округляем финальное число перед отображением
-    const roundedNum = Math.round(num); 
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0,
-    }).format(roundedNum);
+    }).format(num);
 }
-
+// Убедитесь, что formatNumberWithDecimals удалена или не используется!
 // Используется для Таблицы - С ДВУМЯ ЗНАКАМИ
 function formatNumberWithDecimals(num) {
     return new Intl.NumberFormat('ru-RU', {
@@ -268,13 +267,13 @@ function combineData(targets, sales) {
 
 
 function processData(combinedData) {
-    let totalTarget = 0; // Для расчета точного процента (дробные)
-    let totalSales = 0;    // Для расчета точного процента (дробные)
+    // 1. ПЕРЕМЕННЫЕ ДЛЯ ТОЧНОГО РАСЧЕТА % (Суммируем дробные числа)
+    let totalTarget = 0; 
+    let totalSales = 0;   
     
-    // !!! НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Сумма округленных групп) !!!
+    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные суммы групп)
     let displayTotalTarget = 0;
     let displayTotalSales = 0;
-    // !!!
     
     const tableBody = document.getElementById('data-table-body');
     tableBody.innerHTML = '';
@@ -294,20 +293,21 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        const target = Number(item.target) || 0; // Дробное значение группы
-        const sales = Number(item.sales) || 0;     // Дробное значение группы
+        // Дробные значения группы, пришедшие из парсера
+        const target = Number(item.target) || 0; 
+        const sales = Number(item.sales) || 0;     
         
-        // --- Шаг 1: Расчет итогов для % (дробные) ---
+        // A. Обновление точных сумм для расчета процента
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
 
-        // --- Шаг 2: Расчет итогов для ДИСПЛЕЯ (сумма округленных групп) ---
-        const roundedTarget = Math.round(target); // Округляем сумму группы (4318194.53 -> 4318195)
-        const roundedSales = Math.round(sales);     // Округляем сумму группы
+        // B. Округление суммы группы до целого числа (например, 4318194.53 -> 4318195)
+        const roundedTarget = Math.round(target); 
+        const roundedSales = Math.round(sales);     
         
-        displayTotalTarget += roundedTarget; // Суммируем округленное
-        displayTotalSales += roundedSales;   // Суммируем округленное
-        // ---
+        // C. Обновление сумм для вывода ТОТАЛА
+        displayTotalTarget += roundedTarget; // <--- КЛЮЧЕВАЯ ЛИНИЯ: СУММА ОКРУГЛЕННЫХ
+        displayTotalSales += roundedSales;   // <--- КЛЮЧЕВАЯ ЛИНИЯ: СУММА ОКРУГЛЕННЫХ
 
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
@@ -315,13 +315,13 @@ function processData(combinedData) {
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
-        // В таблице показываем округленные суммы групп (целые числа)
+        // В таблице используем округленные суммы групп
         row.innerHTML = `
             <td>${group}</td>
             <td class="align-right">${formatNumber(roundedTarget)}</td> 
             <td class="align-right">${formatNumber(roundedSales)}</td>  
             <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
-            <td class="align-right">${formatNumber(Math.round(difference))}</td>
+            <td class="align-right">${formatNumber(difference)}</td>
         `;
         tableBody.appendChild(row);
 
@@ -329,6 +329,26 @@ function processData(combinedData) {
         chartTargets.push(target);
         chartSales.push(sales);
     }
+    
+    // РАСЧЕТ ИТОГОВ ДЛЯ ВЫВОДА
+    const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
+    const displayTotalDifference = displayTotalTarget - displayTotalSales; 
+    
+    // Обновление HTML (KPI)
+    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);   // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('total-percent').textContent = formatPercent(totalExecution);
+    document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
+
+    // Обновление футера
+    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);   // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
+    document.getElementById('footer-percent').className = getPercentClass(totalExecution);
+    document.getElementById('footer-diff').textContent = formatNumber(displayTotalDifference);
+
+    renderChart(chartLabels, chartTargets, chartSales);
+}
     
     // !!! ТЕСТИРОВАНИЕ !!!
     console.log(`[ФИНАЛЬНЫЙ ИТОГ TARGET - ДЛЯ ДИСПЛЕЯ]: ${displayTotalTarget}`);
