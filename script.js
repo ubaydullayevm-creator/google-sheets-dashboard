@@ -33,41 +33,41 @@ function cleanGroup(groupName) {
     return cleaned;
 }
 
-// ======================================================================================
-// === ФИНАЛЬНАЯ ВЕРСИЯ: ИСПРАВЛЕНИЕ ОШИБКИ ПАРСИНГА ДРОБНОЙ ЧАСТИ ===
-// === Теперь корректно обрабатывает формат: 2 998,55 (пробел как разделитель тысяч) ===
-// ======================================================================================
-
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
 
     let cleaned = rawString
-        .replace(/[^0-9,\.\-\s]/g, '') // 1. Удаляем все, кроме цифр, разделителей и минуса
-        .replace(/\s/g, '')           // 2. Убираем ВСЕ пробелы (разделители тысяч, включая неразрывный пробел)
+        .replace(/[^0-9,\.\-\s]/g, '')
+        .replace(/\s/g, '')
         .replace(/\u00A0/g, '')
         .trim();
 
     if (cleaned === '') return NaN;
-
-    // 3. Обрабатываем запятую и точку для определения десятичного разделителя.
+    
     if (cleaned.includes(',') && cleaned.includes('.')) {
-        // Если присутствуют оба, предполагаем формат "1.234,56" (точка-тысячи, запятая-дробная)
-        // Убираем точки, заменяем запятую на точку.
         cleaned = cleaned.replace(/\./g, '').replace(',', '.');
     } else if (cleaned.includes(',')) {
-        // Если только запятая — это десятичный разделитель.
         cleaned = cleaned.replace(',', '.');
     }
-    // Если только точка, parseFloat обработает ее корректно.
 
     const num = parseFloat(cleaned);
-    
-    // 4. Возвращаем точное число (Number) с плавающей запятой.
     return isNaN(num) ? NaN : num;
 }
 
+/**
+ * Исправляет ошибки точности чисел с плавающей запятой в JavaScript (финансовая точность).
+ */
+function roundToPrecision(num, precision = 10) {
+    if (Math.abs(num) < 1e-10) return 0;
+    const factor = Math.pow(10, precision);
+    return Math.round(num * factor) / factor;
+}
 
-// Парсинг и агрегация для ЛИСТА16 (Продажи) - БЕЗ ИЗМЕНЕНИЙ В ЛОГИКЕ СУММИРОВАНИЯ
+// ======================================================================================
+// === ПАРСИНГ CSV (Добавлен вывод агрегированных сумм) ===
+// ======================================================================================
+
+// Парсинг и агрегация для ЛИСТА16 (Продажи)
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -83,23 +83,26 @@ function parseSalesCSV(csvText) {
         
         if (usdValueString.trim() === '') continue;
         
-        // Используем исправленный парсинг, который сохранит дробную часть
         const usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // Суммирование точных чисел с плавающей запятой
-            aggregatedSales[key] = (aggregatedSales[key] || 0) + usdValue; 
+            let currentSum = aggregatedSales[key] || 0;
+            // Суммирование с коррекцией точности
+            aggregatedSales[key] = roundToPrecision(currentSum + usdValue); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
              continue;
         }
     }
+    // === ВЫВОД В КОНСОЛЬ АГРЕГИРОВАННЫХ ПРОДАЖ ===
+    console.log('--- АГРЕГИРОВАННЫЕ ПРОДАЖИ (ДО ФОРМАТИРОВАНИЯ) ---');
+    console.log(aggregatedSales);
     return aggregatedSales;
 }
 
 
-// Парсинг и агрегация для ЛИСТА Target - БЕЗ ИЗМЕНЕНИЙ В ЛОГИКЕ СУММИРОВАНИЯ
+// Парсинг и агрегация для ЛИСТА Target
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
@@ -115,53 +118,41 @@ function parseTargetCSV(csvText) {
 
         if (usdValueString.trim() === '') continue;
 
-        // Используем исправленный парсинг, который сохранит дробную часть
         const usdValue = cleanAndParseNumber(usdValueString); 
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // Суммирование точных чисел с плавающей запятой
-            aggregatedTarget[key] = (aggregatedTarget[key] || 0) + usdValue;
+            let currentSum = aggregatedTarget[key] || 0;
+            // Суммирование с коррекцией точности
+            aggregatedTarget[key] = roundToPrecision(currentSum + usdValue);
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[3]}".`);
             continue;
         }
     }
+    // === ВЫВОД В КОНСОЛЬ АГРЕГИРОВАННЫХ ЦЕЛЕЙ ===
+    console.log('--- АГРЕГИРОВАННЫЕ ЦЕЛИ (ДО ФОРМАТИРОВАНИЯ) ---');
+    console.log(aggregatedTarget);
     return aggregatedTarget;
 }
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ (НЕ ОКРУГЛЯЕТ) - БЕЗ ИЗМЕНЕНИЙ ===
+// === ФОРМАТИРОВАНИЕ И ОСНОВНАЯ ЛОГИКА ===
 // ======================================================================================
 
-/**
- * Форматирование чисел: Использует локаль, отображает полную точность.
- */
 function formatNumber(num) {
-    // Нет ограничений на minimumFractionDigits/maximumFractionDigits
     return new Intl.NumberFormat('ru-RU').format(num);
 }
 
-/**
- * Форматирование процентов: Использует локаль и стиль "percent", отображает полную точность.
- */
 function formatPercent(num) {
-    // Нет ограничений на minimumFractionDigits/maximumFractionDigits
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'percent',
-    }).format(num);
+    return new Intl.NumberFormat('ru-RU', { style: 'percent' }).format(num);
 }
 
-// Определение класса CSS для цвета %
 function getPercentClass(value) {
     if (value >= 1) return 'percent-good';
     if (value >= 0.85) return 'percent-ok';
     return 'percent-bad';
 }
-
-// ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА И РЕНДЕРИНГ ГРАФИКА (БЕЗ ОКРУГЛЕНИЯ) ===
-// ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
@@ -170,6 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     fetchData();
 });
+
+// ... (fetchData и combineData без изменений) ...
 
 async function fetchData() {
     if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
@@ -209,7 +202,6 @@ async function fetchData() {
     }
 }
 
-// Объединение данных из двух объектов в один
 function combineData(targets, sales) {
     const combined = {};
     const allGroups = new Set([...Object.keys(targets), ...Object.keys(sales)]);
@@ -224,6 +216,7 @@ function combineData(targets, sales) {
     });
     return combined;
 }
+
 
 // Построение таблицы и KPI
 function processData(combinedData) {
@@ -254,12 +247,12 @@ function processData(combinedData) {
         const target = Number(item.target) || 0;
         const sales = Number(item.sales) || 0;
 
-        const execution = (target === 0) ? 0 : sales / target;
-        const difference = target - sales;
+        const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
+        const difference = roundToPrecision(target - sales);
 
-        // Суммирование точных чисел
-        totalTarget += target;
-        totalSales += sales;
+        // Суммирование общих итогов с коррекцией
+        totalTarget = roundToPrecision(totalTarget + target);
+        totalSales = roundToPrecision(totalSales + sales);
 
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
@@ -278,9 +271,16 @@ function processData(combinedData) {
         chartSales.push(sales);
     }
 
-    // Обновление KPI и Итогов (используем ТОЧНЫЕ общие суммы)
-    const totalExecution = (totalTarget === 0) ? 0 : totalSales / totalTarget;
-    const totalDifference = totalTarget - totalSales;
+    // Обновление KPI и Итогов (корректируем финальные расчеты)
+    const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
+    const totalDifference = roundToPrecision(totalTarget - totalSales);
+
+    // === ВЫВОД В КОНСОЛЬ ОБЩИХ ИТОГОВ ===
+    console.log('--- ОБЩИЕ ИТОГИ (ДО ФОРМАТИРОВАНИЯ) ---');
+    console.log(`Total Target (Number): ${totalTarget}`);
+    console.log(`Total Sales (Number): ${totalSales}`);
+    console.log(`Total Execution (Number): ${totalExecution}`);
+    console.log('-------------------------------------------');
 
     // Здесь отображаем полные, точные суммы
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
@@ -297,7 +297,8 @@ function processData(combinedData) {
     renderChart(chartLabels, chartTargets, chartSales);
 }
 
-// Функция для рендеринга графика (Chart.js)
+// ... (renderChart и setInterval без изменений) ...
+
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
 
@@ -334,7 +335,6 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { 
                         label: function(context) { 
-                            // Используем формат без округления
                             return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
                         } 
                     }
@@ -345,7 +345,6 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            // Используем формат без округления
                             return formatNumber(value); 
                         }
                     }
