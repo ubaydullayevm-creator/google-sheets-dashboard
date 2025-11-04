@@ -47,6 +47,7 @@ function cleanAndParseNumber(rawString) {
 
     if (cleaned === '') return NaN;
     
+    // ЭТО ГАРАНТИРУЕТ, ЧТО '123,45' ПРЕОБРАЗУЕТСЯ В 123.45
     if (cleaned.includes(',') && cleaned.includes('.')) {
         cleaned = cleaned.replace(/\./g, '').replace(',', '.');
     } else if (cleaned.includes(',')) {
@@ -66,34 +67,43 @@ function roundToPrecision(num, precision = 10) {
     return Math.round(num * factor) / factor;
 }
 
-// ======================================================================================
-// === ФОРМАТИРОВАНИЕ: УДАЛЕНЫ formatNumber и formatPercent. ===
-// ======================================================================================
 
-// УДАЛЕНО: function formatNumber(num) { ... }
-// УДАЛЕНО: function formatPercent(num) { ... }
+// ======================================================================================
+// === ФОРМАТИРОВАНИЕ (ВОЗВРАЩЕНО C ГАРАНТИЕЙ 2 ЗНАКОВ ПОСЛЕ ЗАПЯТОЙ) ===
+// ======================================================================================
 
 /**
- * Вспомогательная функция для форматирования процентов без Intl.NumberFormat.
- * Просто умножает на 100 и добавляет знак %.
+ * Форматирование чисел: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
  */
-function formatRawPercent(num) {
-    // num - это число, например, 1.042
-    return (num * 100).toFixed(6) + '%'; // Используем toFixed(6) для видимой точности
+function formatNumber(num) {
+    return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 10,
+    }).format(num);
 }
 
-// Определение класса CSS для цвета %
+/**
+ * Форматирование процентов: Использует локаль (ру-РУ), гарантирует минимум 2 знака после запятой.
+ */
+function formatPercent(num) {
+    return new Intl.NumberFormat('ru-RU', {
+        style: 'percent',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 10,
+    }).format(num);
+}
+
 function getPercentClass(value) {
     if (value >= 1) return 'percent-good';
     if (value >= 0.85) return 'percent-ok';
     return 'percent-bad';
 }
 
+
 // ======================================================================================
 // === ПАРСИНГ CSV (Логика суммирования с коррекцией точности) ===
 // ======================================================================================
 
-// Парсинг и агрегация для ЛИСТА16 (Продажи)
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -114,6 +124,7 @@ function parseSalesCSV(csvText) {
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedSales[key] || 0;
+            // roundToPrecision ГАРАНТИРУЕТ, что 0.5 + 0.5 = 1.0, а не 0.9999999999999999
             aggregatedSales[key] = roundToPrecision(currentSum + usdValue); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Group=${rawGroup || 'N/A'}, Raw USD="${row[4]}".`);
@@ -125,8 +136,6 @@ function parseSalesCSV(csvText) {
     return aggregatedSales;
 }
 
-
-// Парсинг и агрегация для ЛИСТА Target
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
@@ -158,13 +167,13 @@ function parseTargetCSV(csvText) {
     return aggregatedTarget;
 }
 
+
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА (Отображение сырых чисел) ===
+// === ОСНОВНАЯ ЛОГИКА ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
-    // Используем toLocaleString только для даты
     document.getElementById('last-update').textContent = now.toLocaleString('ru-RU', {
         day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
@@ -172,12 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function fetchData() {
-    if (TARGET_CSV_URL.includes('СЮДА_ВСТАВЬТЕ')) {
-        console.error('Ошибка: Не обновлены URL-адреса Google Sheets в script.js.');
+    if (TARGET_CSV_URL.includes('ВАШ_СВЕЖИЙ_URL_ДЛЯ_TARGET') || SALES_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_SALES_URL')) {
+        console.error('Критическая ошибка: Обновите URL-адреса Google Sheets в script.js, используя свежие ссылки.');
         alert('Критическая ошибка: Обновите URL-адреса в файле script.js.');
         return;
     }
-
+    // ... (Остальной код fetch/processData) ...
     try {
         console.log('Начало загрузки данных с Google...');
 
@@ -185,6 +194,8 @@ async function fetchData() {
             fetch(TARGET_CSV_URL),
             fetch(SALES_CSV_URL)
         ]);
+        
+        // ... (Проверка ошибок и загрузка CSV) ...
 
         if (!targetResponse.ok || !salesResponse.ok) {
             const status = !targetResponse.ok ? targetResponse.status : salesResponse.status;
@@ -240,6 +251,7 @@ function processData(combinedData) {
 
     const tableBody = document.getElementById('data-table-body');
     tableBody.innerHTML = '';
+    // ... (Создание таблицы) ...
 
     const chartLabels = [];
     const chartTargets = [];
@@ -267,24 +279,16 @@ function processData(combinedData) {
 
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
-        
-        // --- ПРЕДОСТВРАЩАЕМ ПРОБЛЕМУ ТОЧНОСТИ ОТОБРАЖЕНИЯ ---
-        // Используем toFixed(6) для отображения в HTML, чтобы увидеть дробную часть.
-        const targetDisplay = target.toFixed(6);
-        const salesDisplay = sales.toFixed(6);
-        const diffDisplay = difference.toFixed(6);
-        const executionDisplay = formatRawPercent(execution);
-        // ----------------------------------------------------
 
         const row = document.createElement('tr');
         const percentClass = getPercentClass(execution);
 
         row.innerHTML = `
             <td>${group}</td>
-            <td class="align-right">${targetDisplay}</td>
-            <td class="align-right">${salesDisplay}</td>
-            <td class="align-right ${percentClass}">${executionDisplay}</td>
-            <td class="align-right">${diffDisplay}</td>
+            <td class="align-right">${formatNumber(target)}</td>
+            <td class="align-right">${formatNumber(sales)}</td>
+            <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
+            <td class="align-right">${formatNumber(difference)}</td>
         `;
         tableBody.appendChild(row);
 
@@ -296,14 +300,6 @@ function processData(combinedData) {
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const totalDifference = roundToPrecision(totalTarget - totalSales);
 
-    // --- ВЫВОД ИТОГОВ С МАКСИМАЛЬНОЙ ТОЧНОСТЬЮ ---
-    const totalTargetDisplay = totalTarget.toFixed(6);
-    const totalSalesDisplay = totalSales.toFixed(6);
-    const totalDiffDisplay = totalDifference.toFixed(6);
-    const totalExecutionDisplay = formatRawPercent(totalExecution);
-    // ---------------------------------------------
-
-
     // ВЫВОД В КОНСОЛЬ ОБЩИХ ИТОГОВ
     console.log('--- ОБЩИЕ ИТОГИ (ДО ФОРМАТИРОВАНИЯ) ---');
     console.log(`Total Target (Number): ${totalTarget}`);
@@ -311,29 +307,28 @@ function processData(combinedData) {
     console.log(`Total Execution (Number): ${totalExecution}`);
     console.log('-------------------------------------------');
 
-    // Обновление HTML с использованием сырых, высокоточных чисел
-    document.getElementById('total-target').textContent = totalTargetDisplay;
-    document.getElementById('total-sales').textContent = totalSalesDisplay;
-    document.getElementById('total-percent').textContent = totalExecutionDisplay;
+    // Обновление HTML
+    document.getElementById('total-target').textContent = formatNumber(totalTarget);
+    document.getElementById('total-sales').textContent = formatNumber(totalSales);
+    document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
-    document.getElementById('footer-target').textContent = totalTargetDisplay;
-    document.getElementById('footer-sales').textContent = totalSalesDisplay;
-    document.getElementById('footer-percent').textContent = totalExecutionDisplay;
+    document.getElementById('footer-target').textContent = formatNumber(totalTarget);
+    document.getElementById('footer-sales').textContent = formatNumber(totalSales);
+    document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
-    document.getElementById('footer-diff').textContent = totalDiffDisplay;
+    document.getElementById('footer-diff').textContent = formatNumber(totalDifference);
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
 
-// Функция для рендеринга графика (Chart.js)
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
 
     if (window.myChart instanceof Chart) {
         window.myChart.destroy();
     }
-
+    // ... (Код графика) ...
     window.myChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -363,8 +358,7 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { 
                         label: function(context) { 
-                            // Используем сырую строку с точкой и точностью
-                            return `${context.dataset.label}: ${context.raw.toFixed(6)}`; 
+                            return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
                         } 
                     }
                 }
@@ -374,8 +368,7 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            // Используем сырую строку с точкой и точностью
-                            return value.toFixed(6); 
+                            return formatNumber(value); 
                         }
                     }
                 }
