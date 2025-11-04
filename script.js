@@ -77,26 +77,18 @@ function roundToPrecision(num, precision = 12) {
 
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ (ДВЕ ВЕРСИИ) ===
+// === ФОРМАТИРОВАНИЕ (ТОЛЬКО ЦЕЛЫЕ ЧИСЛА) ===
 // ======================================================================================
 
 /**
- * Форматирование чисел: Используется для KPI (Target/Sales Projection). 
- * Выводит ЦЕЛЫЕ числа (0 знаков после запятой), как вы просили.
+ * Форматирование чисел: Используется ВЕЗДЕ.
+ * Выводит ЦЕЛЫЕ числа (0 знаков после запятой), так как мы уже округлили их
+ * в функции parseCSV.
  */
-// Используется для KPI (Target/Sales Projection)
 function formatNumber(num) {
     return new Intl.NumberFormat('ru-RU', {
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0,
-    }).format(num);
-}
-
-// Используется для строк таблицы и футера
-function formatNumberWithDecimals(num) {
-    return new Intl.NumberFormat('ru-RU', {
-        minimumFractionDigits: 0, // Также ставим 0, чтобы соответствовать новой логике суммирования
-        maximumFractionDigits: 0, 
     }).format(num);
 }
 
@@ -119,10 +111,9 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (УСИЛЕННЫЙ) ===
+// === ПАРСИНГ CSV (УСИЛЕННЫЙ И С ОКРУГЛЕНИЕМ СТРОК) ===
 // ======================================================================================
 
-// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -144,9 +135,10 @@ function parseSalesCSV(csvText) {
         if (usdValueString.trim() === '') continue;
         
         let usdValue = cleanAndParseNumber(usdValueString); 
-        
+        const key = group === '' ? 'UNGROUPED_SALES' : group;
+
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем каждый элемент до целого числа (0 знаков) !!!
+            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем КАЖДУЮ СТРОКУ до целого числа !!!
             usdValue = Math.round(usdValue); 
             
             let currentSum = aggregatedSales[key] || 0;
@@ -160,7 +152,6 @@ function parseSalesCSV(csvText) {
     return aggregatedSales;
 }
 
-// Пожалуйста, замените эту функцию в вашем файле script.js
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
@@ -184,7 +175,7 @@ function parseTargetCSV(csvText) {
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
-            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем каждый элемент до целого числа (0 знаков) !!!
+            // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Округляем КАЖДУЮ СТРОКУ до целого числа !!!
             usdValue = Math.round(usdValue);
             
             let currentSum = aggregatedTarget[key] || 0;
@@ -200,7 +191,7 @@ function parseTargetCSV(csvText) {
 
 
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА И ВЫВОД ===
+// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (Используем formatNumber ВЕЗДЕ) ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -236,9 +227,8 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
         
-        const salesLines = salesCSV.split('\n').filter(line => line.trim() !== '');
         console.log('--- ПРОВЕРКА ИСХОДНЫХ ДАННЫХ SALES ---');
-        console.log(`Количество строк в Sales CSV: ${salesLines.length - 1} (без заголовка)`);
+        console.log(`Количество строк в Sales CSV: ${salesCSV.split('\n').length - 1} (без заголовка)`);
         console.log(`Первые 500 символов Sales CSV: \n${salesCSV.substring(0, 500)}...`);
         console.log('-------------------------------------------');
         
@@ -308,10 +298,10 @@ function processData(combinedData) {
 
         row.innerHTML = `
             <td>${group}</td>
-            <td class="align-right">${formatNumberWithDecimals(target)}</td>
-            <td class="align-right">${formatNumberWithDecimals(sales)}</td>
+            <td class="align-right">${formatNumber(target)}</td>
+            <td class="align-right">${formatNumber(sales)}</td>
             <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
-            <td class="align-right">${formatNumberWithDecimals(difference)}</td>
+            <td class="align-right">${formatNumber(difference)}</td>
         `;
         tableBody.appendChild(row);
 
@@ -323,19 +313,17 @@ function processData(combinedData) {
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const totalDifference = roundToPrecision(totalTarget - totalSales);
 
-    // Обновление HTML
-    // ИСПОЛЬЗУЕМ formatNumber для целых чисел в KPI (Target/Sales Projection)
+    // Обновление HTML (KPI и футер)
     document.getElementById('total-target').textContent = formatNumber(totalTarget);
     document.getElementById('total-sales').textContent = formatNumber(totalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
-    // ИСПОЛЬЗУЕМ formatNumberWithDecimals для футера таблицы
-    document.getElementById('footer-target').textContent = formatNumberWithDecimals(totalTarget);
-    document.getElementById('footer-sales').textContent = formatNumberWithDecimals(totalSales);
+    document.getElementById('footer-target').textContent = formatNumber(totalTarget);
+    document.getElementById('footer-sales').textContent = formatNumber(totalSales);
     document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
-    document.getElementById('footer-diff').textContent = formatNumberWithDecimals(totalDifference);
+    document.getElementById('footer-diff').textContent = formatNumber(totalDifference);
 
     renderChart(chartLabels, chartTargets, chartSales);
 }
@@ -376,8 +364,8 @@ function renderChart(labels, targetData, salesData) {
                 tooltip: {
                     callbacks: { 
                         label: function(context) { 
-                            // Всплывающие подсказки тоже используем с 2 знаками
-                            return `${context.dataset.label}: ${formatNumberWithDecimals(context.raw)}`; 
+                            // Всплывающие подсказки тоже используем целые числа
+                            return `${context.dataset.label}: ${formatNumber(context.raw)}`; 
                         } 
                     }
                 }
@@ -387,8 +375,8 @@ function renderChart(labels, targetData, salesData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            // Ось Y используем с 2 знаками
-                            return formatNumberWithDecimals(value); 
+                            // Ось Y используем целые числа
+                            return formatNumber(value); 
                         }
                     }
                 }
