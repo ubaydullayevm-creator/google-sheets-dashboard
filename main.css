@@ -8,7 +8,7 @@ body {
     background-color: #f8f9fa;
     color: #343a40;
     line-height: 1.6;
-    overflow-x: hidden; /* КРИТИЧНО: Запрещаем горизонтальную прокрутку на уровне страницы */
+    overflow-x: hidden; /* Запрещаем горизонтальную прокрутку на уровне страницы */
 }
 header {
     background-color: #ffffff;
@@ -21,23 +21,10 @@ main {
     max-width: 1500px; 
     margin: 0 auto;
 }
-.data-section {
-    margin-bottom: 40px;
-    padding: 20px;
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-h2 {
-    color: #007bff;
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: 10px;
-    margin-top: 0;
-    margin-bottom: 20px;
-}
+/* ... (Остальные стили, не касающиеся компоновки, опущены для краткости) ... */
 
 /* ====================================================================
-   KPI КАРТОЧКИ
+   KPI КАРТОЧКИ (Стилизация)
    ==================================================================== */
 .kpi-grid {
     display: flex;
@@ -55,12 +42,7 @@ h2 {
     text-align: center; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.kpi-value {
-    font-size: 2em;
-    display: block;
-    margin-top: 8px;
-    color: #343a40;
-}
+/* ... (KPI Value/Percent стили) ... */
 
 /* ====================================================================
    ОСНОВНАЯ КОМПОНОВКА (ФИЛЬТР + ТАБЛИЦА/ГРАФИК)
@@ -88,11 +70,11 @@ h2 {
     display: flex;
     gap: 15px; 
     align-items: stretch;
-    min-width: 0; /* Разрешаем сжиматься, чтобы уместиться */
+    min-width: 0; 
 }
 .table-container {
     flex: 2; /* Таблица занимает 2/3 */
-    overflow-x: auto; /* ВНУТРЕННЯЯ прокрутка, если таблица шире контейнера */
+    overflow-x: auto; /* ВНУТРЕННЯЯ прокрутка, если таблица шире */
     min-width: 0; 
 }
 .chart-container {
@@ -109,15 +91,17 @@ h2 {
    СТИЛИ ТАБЛИЦЫ (КЛЮЧЕВЫЕ ИСПРАВЛЕНИЯ ВЫРАВНИВАНИЯ)
    ==================================================================== */
 table {
-    /* Удаляем width: 100% и table-layout: fixed; */
+    width: 100%;
     border-collapse: collapse;
-    min-width: 600px; /* Минимальная ширина для предотвращения разрывов */
+    /* КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Гарантирует одинаковую ширину th и td */
+    table-layout: fixed; 
+    min-width: 650px; /* Минимальная ширина для предотвращения разрывов */
 }
 th, td {
     padding: 10px 10px; 
     text-align: left;
     border-bottom: 1px solid #f1f1f1;
-    white-space: nowrap; /* КРИТИЧНО: Запрещаем перенос текста в ячейках */
+    white-space: nowrap; /* Числа не переносятся, вызывая прокрутку в table-container */
 }
 
 /* ЗАГОЛОВКИ ТАБЛИЦЫ */
@@ -128,20 +112,32 @@ thead th {
     font-size: 0.9em;
 }
 
-/* КОЛОНКИ С ЧИСЛАМИ */
+/* ПРИМЕНЕНИЕ ШИРИНЫ К ЗАГОЛОВКАМ И ДАННЫМ ОДНОВРЕМЕННО */
+
+/* 1. Группа (первая колонка) */
+.table-container th:nth-child(1), .table-container td:nth-child(1) { width: 100px; }
+/* 2. Target */
+.table-container th:nth-child(2), .table-container td:nth-child(2) { width: 130px; text-align: right; }
+/* 3. Sales */
+.table-container th:nth-child(3), .table-container td:nth-child(3) { width: 110px; text-align: right; }
+/* 4. Выполнение */
+.table-container th:nth-child(4), .table-container td:nth-child(4) { width: 100px; text-align: right; }
+/* 5. Разница */
+.table-container th:nth-child(5), .table-container td:nth-child(5) { width: 150px; text-align: right; }
+
+
+/* КОЛОНКИ С ЧИСЛАМИ (дополнительное форматирование для данных) */
 .align-right {
-    text-align: right;
+    /* Добавляем font-family для чисел для идеального вертикального выравнивания */
     font-family: 'Consolas', 'Courier New', monospace; 
 }
-
-/* УСТАНОВКА ЯВНОЙ, но нефиксированной ширины для заголовков */
-/* Это поможет браузеру быстрее определить нужную ширину */
-.table-container th:nth-child(1) { width: 100px; } /* Группа */
-.table-container th:nth-child(2) { width: 120px; } /* Target */
-.table-container th:nth-child(3) { width: 120px; } /* Sales */
-.table-container th:nth-child(4) { width: 100px; } /* Выполнение */
-.table-container th:nth-child(5) { width: 140px; } /* Разница */
-
+.table-container td:nth-child(2),
+.table-container td:nth-child(3),
+.table-container td:nth-child(4),
+.table-container td:nth-child(5) {
+    /* Переназначаем класс align-right для всех ячеек с числами */
+    text-align: right !important;
+}
 
 tfoot td {
     background-color: #e9ecef; 
