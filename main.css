@@ -1,59 +1,22 @@
 /* ========================================================================= */
-/* --- 0. Базовые настройки и Макет (Левый сайдбар + Контент) --- */
+/* --- 0. Базовые настройки и Макет --- */
 /* ========================================================================= */
 
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 0; 
+    padding: 20px;
     background-color: #f4f7f6;
     color: #333;
 }
 
-/* Фиксированная левая панель для фильтров */
-/* Фиксированная левая панель для фильтров */
-.filter-sidebar {
-    /* ... (существующие стили filter-sidebar) ... */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 150px; 
-    height: 100vh;
-    background-color: #fff;
-    padding: 20px 10px;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
-    z-index: 20;
-    display: flex;
-    flex-direction: column; 
-    gap: 10px;
-    overflow-y: auto;
-}
-
-/* !!! НОВЫЙ СТИЛЬ ДЛЯ ЗАГОЛОВКА ФИЛЬТРОВ !!! */
-.filter-title {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #333;
-    text-align: center;
-    margin-bottom: 15px; /* Отступ от кнопок */
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-/* !!! КОНЕЦ СТИЛЯ ЗАГОЛОВКА !!! */
-
-/* ... (стили кнопок, dashboard-container и т.д. остаются прежними) ... */
-
-/* Основной контейнер контента (растянут на всю оставшуюся ширину) */
 .dashboard-container {
-    /* !!! ИЗМЕНЕНИЕ: Убираем max-width и центрирование !!! */
-    /* Теперь контейнер занимает 100% ширины минус сайдбар */
-    margin: 0; 
-    margin-left: 170px; /* Отступ от фиксированного сайдбара (150px + 20px) */
-    padding: 30px 20px; 
-    background-color: #f4f7f6; 
-    min-height: 100vh;
+    max-width: 1200px; 
+    margin: 0 auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 30px;
 }
 
 /* ========================================================================= */
@@ -96,23 +59,21 @@ body {
 /* KPI Section */
 .kpi-section {
     display: flex;
-    /* !!! ИЗМЕНЕНИЕ: Распределяем KPI равномерно по ширине !!! */
-    justify-content: space-around; 
-    width: 100%;
+    justify-content: center;
     gap: 30px;
     margin-bottom: 30px;
     padding: 0; 
 }
 
 .kpi-card {
-    background-color: #fff; /* Меняем фон на белый */
+    background-color: #fff; 
     border-radius: 12px;
     padding: 25px 40px;
     text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Усиливаем тень */
-    flex: 1; /* Занимают равное пространство */
-    min-width: 250px; /* Минимальная ширина, чтобы не схлопнулись */
-    max-width: 45%; /* Максимальная ширина, чтобы не растягивались слишком сильно */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); 
+    flex: 1; 
+    min-width: 250px; 
+    max-width: 45%; 
     position: relative;
     transition: transform 0.2s;
 }
@@ -128,8 +89,6 @@ body {
 .kpi-card.sales-card {
     border: 1px solid #5bc0de;
 }
-
-/* ... (Остальные стили KPI остаются прежними) ... */
 
 .kpi-title {
     font-size: 1.1em;
@@ -154,21 +113,37 @@ body {
 }
 
 /* ========================================================================= */
-/* --- 2. Стили кнопок (Вертикальные) --- */
+/* --- 2. Стили кнопок (Горизонтальный, фиксированный) --- */
 /* ========================================================================= */
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 30px;
+    justify-content: center;
+    
+    /* Сохраняем "прилипание" кнопок при скролле */
+    position: sticky; 
+    top: 0; 
+    background-color: #fff;
+    padding: 15px 0;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
 
 .filter-button {
     background-color: #e0e0e0;
     color: #333;
     border: none;
-    padding: 10px 5px; 
-    border-radius: 5px; 
+    padding: 10px 20px; 
+    border-radius: 20px; 
     cursor: pointer;
     font-size: 0.9em;
     font-weight: bold;
     transition: background-color 0.2s, box-shadow 0.2s;
-    width: 100%; 
-    text-align: center;
+    width: auto; 
 }
 
 .filter-button:hover {
@@ -187,7 +162,7 @@ body {
 }
 
 /* ========================================================================= */
-/* --- 3. Table & Chart (Растягиваем на всю ширину) --- */
+/* --- 3. Table & Chart --- */
 /* ========================================================================= */
 
 .table-container {
@@ -197,59 +172,103 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    /* !!! ИЗМЕНЕНИЕ: Убираем ограничение ширины, позволяя таблице растянуться !!! */
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Убеждаемся, что колонки распределены равномерно */
 }
 
-/* ... (Остальные стили таблицы остаются прежними) ... */
+table th, table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 0.85em;
+}
+
+table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+table tfoot tr {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+    border-top: 2px solid #ddd;
+}
+
+.align-right {
+    text-align: right;
+}
+
+/* Percent Classes */
+.percent-good { color: #5cb85c; } 
+.percent-ok { color: #f0ad4e; }    
+.percent-bad { color: #d9534f; }   
 
 .chart-container {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    /* !!! ИЗМЕНЕНИЕ: Убираем ограничение ширины, позволяя графику растянуться !!! */
 }
 
 /* ========================================================================= */
-/* --- 4. Responsive adjustments (для маленьких экранов) --- */
+/* --- 4. Секция Разделения по Территориям --- */
 /* ========================================================================= */
 
-@media (max-width: 900px) {
-    /* На маленьких экранах сайдбар становится обычным, не фиксированным блоком */
-    .filter-sidebar {
-        position: relative; 
-        width: 100%; 
-        height: auto;
-        flex-direction: row; 
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-        box-shadow: none;
-        padding: 10px;
-        justify-content: flex-start;
-    }
-    
+.territory-section {
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 2px solid #ddd;
+}
+
+.territory-section h2 {
+    font-size: 2em;
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.territory-kpi-section {
+    justify-content: space-around;
+}
+
+.territory-table-container {
+    margin-top: 30px;
+}
+
+/* ========================================================================= */
+/* --- 5. Responsive adjustments (для маленьких экранов) --- */
+/* ========================================================================= */
+
+@media (max-width: 768px) {
     .dashboard-container {
-        margin-left: 0; /* Убираем отступ */
-        max-width: 100%;
         padding: 10px;
+        box-shadow: none;
     }
-    
+    .dashboard-header {
+        flex-direction: column;
+    }
     .kpi-section {
         flex-direction: column;
         align-items: center;
     }
     .kpi-card {
-        max-width: 95%;
-        flex: 1 1 95%;
+        max-width: 90%;
+        flex: 1 1 90%;
+    }
+    .filter-buttons {
+        padding: 10px 0;
     }
     .filter-button {
-        width: auto;
-        flex-grow: 1; 
+        flex-grow: 1;
     }
 }
