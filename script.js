@@ -15,7 +15,7 @@ let selectedFilterGroup = 'All';
 
 
 // ======================================================================================
-// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ ===
+// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ (Оставляем как есть) ===
 // ======================================================================================
 
 /** Очистка имени группы */
@@ -28,7 +28,6 @@ function cleanGroup(groupName) {
     if (/^\d+$/.test(cleaned) || cleaned === '') {
         return '';
     }
-    // Выбираем первое слово, если оно похоже на аббревиатуру (от 2 до 5 символов)
     const parts = cleaned.split(/\s+/);
     if (parts.length > 0 && parts[0].length > 1 && parts[0].length <= 5) {
         return parts[0];
@@ -47,14 +46,11 @@ function cleanAndParseNumber(rawString) {
         .replace(/[^\d,\.\-]/g, '');
     if (cleaned === '') return NaN;
 
-    // Замена запятой на точку, если она используется как десятичный разделитель
     if (cleaned.includes(',')) {
         if (cleaned.includes('.') && cleaned.indexOf(',') < cleaned.indexOf('.')) {
-             // Если точка - разделитель тысяч, а запятая - десятичный (1.000,50) -> убрать точки, заменить запятую
             cleaned = cleaned.replace(/\./g, '');
             cleaned = cleaned.replace(',', '.');
         } else if (!cleaned.includes('.')) {
-            // Если только запятая (1000,50)
              cleaned = cleaned.replace(',', '.');
         }
     }
@@ -95,30 +91,26 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV ===
+// === ПАРСИНГ CSV (Оставляем как есть) ===
 // ======================================================================================
 
-/** Парсинг CSV с данными о продажах и агрегация */
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
     const detailedSales = [];
 
-    // NOTE: Наша CSV-строка из Sales_CSV_URL имеет столбцы: 0: Номенклатура, 1: Группа, 2: Территория, 3: Парент, 4: USD
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
-        // Регулярное выражение для парсинга CSV с учетом кавычек
         const row = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || line.split(',');
 
         if (row.length < 5) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
 
-        // Используем индексы, соответствующие вашему опубликованному CSV
         const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
-        const territory = cleanRow[3] || 'Не определено'; // Парент
-        const usdValueString = cleanRow[4] || ''; // Столбец с продажами в USD
+        const territory = cleanRow[3] || 'Не определено';
+        const usdValueString = cleanRow[4] || '';
 
         if (usdValueString.trim() === '') continue;
 
@@ -128,27 +120,23 @@ function parseSalesCSV(csvText) {
         if (!isNaN(usdValue) && usdValue !== 0) {
             usdValue = roundToPrecision(usdValue);
 
-            // 1. Агрегация
             let currentSum = aggregatedSales[key] || 0;
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
 
-            // 2. Детализация (для фильтрации территорий)
             detailedSales.push({
                 Group: group,
                 Sales: usdValue,
-                Parent: territory // Парент
+                Parent: territory
             });
         }
     }
     return { aggregatedSales, detailedSales };
 }
 
-/** Парсинг CSV с данными о Target */
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTarget = {};
 
-    // NOTE: Наша CSV-строка из Target_CSV_URL имеет столбцы: 0: Год, 1: Месяц, 2: Группа, 3: Target USD
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         const row = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || line.split(',');
@@ -157,10 +145,9 @@ function parseTargetCSV(csvText) {
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
 
-        // Используем индексы, соответствующие вашему опубликованному CSV
-        const rawGroup = cleanRow[2] || ''; // Группа
+        const rawGroup = cleanRow[2] || '';
         const group = cleanGroup(rawGroup);
-        const usdValueString = cleanRow[3] || ''; // Target USD
+        const usdValueString = cleanRow[3] || '';
 
         if (usdValueString.trim() === '') continue;
 
@@ -178,10 +165,9 @@ function parseTargetCSV(csvText) {
 
 
 // ======================================================================================
-// === ОБЪЕДИНЕНИЕ ДАННЫХ И ЛОГИКА ТЕРРИТОРИЙ ===
+// === ОБЪЕДИНЕНИЕ ДАННЫХ И ЛОГИКА ТЕРРИТОРИЙ (ИСПРАВЛЕНО) ===
 // ======================================================================================
 
-/** Объединение агрегированных Target и Sales */
 function combineData(targets, salesAggregated, salesDetailed) {
     const combined = {};
     const allGroups = new Set([...Object.keys(targets), ...Object.keys(salesAggregated)]);
@@ -199,39 +185,34 @@ function combineData(targets, salesAggregated, salesDetailed) {
     return combined;
 }
 
-/** Агрегация данных по Территориям */
+/** Агрегация данных по Территориям (ИСПРАВЛЕНО: удалено присвоение groupTarget) */
 function aggregateDataByTerritory(dataDetails, combinedData) {
     const aggregated = {};
     const groupTargets = {};
 
-    // Шаг 1: Сбор Targets по Group из общей комбинации
+    // Шаг 1: Сбор Targets по Group (для расчета общего итога)
     Object.keys(combinedData).forEach(key => {
         if (key !== 'allSalesDetails') {
             groupTargets[key] = combinedData[key].target || 0;
         }
     });
 
-    // Шаг 2: Агрегация Sales по Territory и присвоение Group Target
+    // Шаг 2: Агрегация Sales по Territory. TARGET ОСТАЕТСЯ 0
     dataDetails.forEach(detail => {
         const territory = detail.Parent || 'Не определено';
         const sales = detail.Sales;
-        const group = detail.Group;
+        // const group = detail.Group; // Группа нам здесь больше не нужна
 
         if (!aggregated[territory]) {
-            aggregated[territory] = { target: 0, sales: 0, groupTarget: 0 };
-        }
-
-        // Присваиваем Target Группы
-        // NOTE: Это просто справочная цифра. В таблице Территорий мы показываем Target всей Группы, а не Target Территории.
-        if (aggregated[territory].groupTarget === 0 && groupTargets[group]) {
-             aggregated[territory].groupTarget = groupTargets[group];
+            // УДАЛЕНО: groupTarget
+            aggregated[territory] = { target: 0, sales: 0 };
         }
 
         aggregated[territory].sales = roundToPrecision(aggregated[territory].sales + sales);
     });
 
     // Шаг 3: Пересчет общих итогов
-    // Total Target для Territories должен быть равен Total Target для ВСЕХ Groups.
+    // Total Target для Territories - это сумма всех Targets Групп
     let totalTarget = Object.values(groupTargets).reduce((sum, val) => sum + val, 0);
 
     // Total Sales агрегируется правильно
@@ -242,10 +223,10 @@ function aggregateDataByTerritory(dataDetails, combinedData) {
 
 
 // ======================================================================================
-// === ОТОБРАЖЕНИЕ ДАННЫХ (ГРУППЫ И ТЕРРИТОРИИ) ===
+// === ОТОБРАЖЕНИЕ ДАННЫХ (ГРУППЫ И ТЕРРИТОРИИ - ИСПРАВЛЕНО) ===
 // ======================================================================================
 
-/** Отображение данных по Группам */
+/** Отображение данных по Группам (Оставляем как есть) */
 function displayGroupData(filteredGroupData) {
     let totalTarget = 0;
     let totalSales = 0;
@@ -322,12 +303,11 @@ function displayGroupData(filteredGroupData) {
         kpiSalesParent.style.borderColor = totalExecutionClass === 'percent-good' ? '#5cb85c' : totalExecutionClass === 'percent-ok' ? '#f0ad4e' : '#d9534f';
     }
 
-
     renderChart(chartLabels, chartTargets, chartSales);
 }
 
 
-/** Отображение данных по Территориям */
+/** Отображение данных по Территориям (ИСПРАВЛЕНО: Target всегда 0, Разница всегда Sales) */
 function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     const tbody = document.getElementById('territory-data-table-body');
     tbody.innerHTML = '';
@@ -340,30 +320,30 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     sortedTerritories.forEach(territory => {
         const data = aggregatedData[territory];
 
-        // Target - это Target Группы
-        const target = Math.round(data.groupTarget);
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Target по Территории неизвестен, ставим 0
+        const target = 0;
         const sales = Math.round(data.sales);
 
-        // Используем groupTarget для расчета выполнения
-        const targetForCalculation = data.groupTarget;
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Выполнение и Разница для строк Территории не рассчитываются
+        // так как нет детального Target. Отображаем "Н/Д" или 0.
+        const execution = 0; // Всегда 0, так как Target=0 для строки
+        const difference = -sales; // Разница: Target (0) - Sales = -Sales
 
-        const execution = (targetForCalculation === 0) ? 0 : roundToPrecision(sales / targetForCalculation);
-        const difference = roundToPrecision(targetForCalculation - sales); // Разница рассчитывается от groupTarget
-
-        const percentClass = getPercentClass(execution);
+        // Здесь нет светофора, так как нет корректного Target
+        const percentClass = '';
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${territory}</td>
             <td class="align-right">${formatNumber(target)}</td>
             <td class="align-right">${formatNumber(sales)}</td>
-            <td class="align-right ${percentClass}">${formatPercent(execution)}</td>
+            <td class="align-right ${percentClass}">${'Н/Д'}</td> 
             <td class="align-right">${formatNumber(Math.round(difference))}</td>
         `;
         tbody.appendChild(row);
     });
 
-    // Общие итоги в футере таблицы и KPI
+    // Общие итоги в футере таблицы и KPI (РАСЧЕТ ВЕРЕН)
     const totalExecution = (totalTarget === 0) ? 0 : roundToPrecision(totalSales / totalTarget);
     const totalExecutionClass = getPercentClass(totalExecution);
     const displayTotalTarget = Math.round(totalTarget);
@@ -393,7 +373,7 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
 
 
 // ======================================================================================
-// === ЛОГИКА ФИЛЬТРОВ И ГРАФИКОВ ===
+// === ЛОГИКА ФИЛЬТРОВ И ГРАФИКОВ (Оставляем как есть) ===
 // ======================================================================================
 
 function updateFilterButtons() {
@@ -412,7 +392,6 @@ function generateFilterButtons(data) {
     const groups = new Set();
     Object.keys(data).forEach(group => {
         const groupKey = group.toUpperCase();
-        // Фильтруем технические ключи
         if (groupKey !== 'TIER' && !groupKey.startsWith('UNGROUPED') && groupKey !== 'ALLSALESDETAILS') {
             groups.add(group);
         }
@@ -538,6 +517,7 @@ function updateDashboard(combinedData) {
         filteredSalesDetails = combinedData.allSalesDetails.filter(detail => detail.Group === selectedFilterGroup);
     }
 
+    // В aggregateDataByTerritory нам нужно передать allCombinedData для получения Total Target
     const { aggregated: territoryAggregated, totalTarget: territoryTotalTarget, totalSales: territoryTotalSales } = aggregateDataByTerritory(filteredSalesDetails, allCombinedData);
 
     // 4. Отображение Территорий
@@ -553,7 +533,6 @@ function updateDashboard(combinedData) {
 /** Функция загрузки данных по двум URL */
 async function fetchData() {
     try {
-        // Загрузка двух CSV одновременно
         const [targetResponse, salesResponse] = await Promise.all([
             fetch(TARGET_CSV_URL),
             fetch(SALES_CSV_URL)
@@ -569,12 +548,9 @@ async function fetchData() {
         const targets = parseTargetCSV(targetCSV);
         const { aggregatedSales, detailedSales } = parseSalesCSV(salesCSV);
 
-        // Сохраняем объединенные данные глобально
         allCombinedData = combineData(targets, aggregatedSales, detailedSales);
 
-        // 1. Создание кнопок фильтров
         generateFilterButtons(allCombinedData);
-        // 2. Запуск обновления дашборда
         updateDashboard(allCombinedData);
 
     } catch (error) {
@@ -589,7 +565,6 @@ async function fetchData() {
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Начальное отображение времени и запуск загрузки
     document.getElementById('last-update').textContent = new Date().toLocaleString('ru-RU', {
         day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
