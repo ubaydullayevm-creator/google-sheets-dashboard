@@ -61,7 +61,7 @@ hr {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     font-size: 1em;
     font-weight: 600;
-    border: 1px solid #ced4da; /* Четкий ободок */
+    border: 1px solid #ced4da;
     transition: all 0.3s;
 }
 .kpi-value {
@@ -78,21 +78,21 @@ hr {
 }
 
 /* ====================================================================
-   ВЕРТИКАЛЬНЫЙ ФИЛЬТР (Улучшено выравнивание)
+   ВЕРТИКАЛЬНЫЙ ФИЛЬТР
    ==================================================================== */
 .content-wrapper {
     display: flex;
     gap: 25px;
-    align-items: flex-start; /* Выравнивает элементы по верху */
+    align-items: flex-start;
 }
 .filter-panel {
     flex-shrink: 0; 
     width: 150px; 
     padding: 15px;
-    background: #f0f0f5; /* Легкий серый фон */
+    background: #f0f0f5; 
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    position: sticky; /* Фиксируем при прокрутке */
+    position: sticky;
     top: 20px;
 }
 .filter-panel h3 {
@@ -129,34 +129,33 @@ hr {
 }
 
 /* ====================================================================
-   ТАБЛИЦА И ГРАФИК (Flex-контейнеры)
+   ТАБЛИЦА И ГРАФИК
    ==================================================================== */
 .table-and-chart-section {
     flex-grow: 1;
     display: flex;
     gap: 20px;
-    /* Убедимся, что таблица и график одинаково растягиваются по вертикали */
     align-items: stretch;
 }
 .table-container {
-    flex: 2; /* Таблица занимает 2/3 ширины */
+    flex: 2;
     overflow-x: auto;
 }
 .chart-container {
-    flex: 1; /* График занимает 1/3 ширины */
-    max-height: 400px; /* Ограничение высоты для кругового графика */
+    flex: 1;
+    max-height: 400px;
     background: #ffffff;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-
 /* ====================================================================
-   СТИЛИ ТАБЛИЦЫ (Улучшено выравнивание и дизайн)
+   СТИЛИ ТАБЛИЦЫ (КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ ШИРИНЫ)
    ==================================================================== */
 table {
     width: 100%;
+    /* Убираем min-width, чтобы flex-контейнер управлял растяжением */
     border-collapse: collapse;
     background: #fff;
     border-radius: 8px;
@@ -164,34 +163,60 @@ table {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 th, td {
-    padding: 12px 15px;
+    padding: 12px 10px; /* Немного уменьшим паддинг для экономии места */
     text-align: left;
-    border-bottom: 1px solid #f1f1f1; /* Более светлая разделительная линия */
+    border-bottom: 1px solid #f1f1f1;
+    white-space: nowrap; /* Важно: предотвращает перенос текста в ячейках */
 }
+
+/* ЗАГОЛОВКИ ТАБЛИЦЫ (Улучшенная контрастность) */
 thead th {
-    background-color: #3f51b5; /* Глубокий синий */
+    background-color: #3f51b5; 
     color: white;
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.9em;
 }
+
+/* УСТАНОВКА МИНИМАЛЬНОЙ ШИРИНЫ ДЛЯ КОЛОНОК С БОЛЬШИМИ ЧИСЛАМИ */
+/* Используем nth-child для селекции колонок */
+/* 1. Группа */
+table tr > *:nth-child(1) {
+    min-width: 80px; 
+}
+/* 2. Target */
+table tr > *:nth-child(2) {
+    min-width: 120px; 
+}
+/* 3. Sales */
+table tr > *:nth-child(3) {
+    min-width: 120px; 
+}
+/* 4. Выполнение */
+table tr > *:nth-child(4) {
+    min-width: 90px;
+}
+/* 5. Разница */
+table tr > *:nth-child(5) {
+    min-width: 130px; 
+}
+
 tbody tr:last-child td {
     border-bottom: none;
 }
 tbody tr:nth-child(even) {
-    background-color: #f7f7f7; /* Чередование строк */
+    background-color: #f7f7f7;
 }
 tbody tr:hover {
     background-color: #e9e9e9;
 }
 tfoot td {
-    background-color: #e9ecef; /* Фон для итоговой строки */
+    background-color: #e9ecef;
     font-weight: bold;
     border-top: 2px solid #ced4da;
 }
 .align-right {
     text-align: right;
-    /* Фиксированный шрифт для чисел для идеального выравнивания по запятой/точке */
     font-family: 'Consolas', 'Courier New', monospace; 
 }
 
@@ -200,15 +225,15 @@ tfoot td {
    СВЕТОФОР Исполнения
    ==================================================================== */
 .percent-good {
-    color: #28a745; /* Green */
+    color: #28a745; 
     font-weight: bold;
 }
 .percent-ok {
-    color: #ffc107; /* Amber/Yellow */
+    color: #ffc107; 
     font-weight: bold;
 }
 .percent-bad {
-    color: #dc3545; /* Red */
+    color: #dc3545; 
     font-weight: bold;
 }
 
@@ -222,8 +247,8 @@ tfoot td {
     }
     .filter-panel {
         width: auto;
-        order: -1; /* Фильтр сверху */
-        position: static; /* Отключаем sticky */
+        order: -1;
+        position: static;
         top: auto;
     }
     .filter-buttons-container {
@@ -234,7 +259,7 @@ tfoot td {
     .filter-button {
         flex-grow: 1;
         text-align: center;
-        max-width: 100px; /* Ограничение ширины кнопок на узких экранах */
+        max-width: 100px;
     }
     .chart-container {
         max-height: 350px;
