@@ -96,6 +96,8 @@ function getPercentClass(value) {
 
 // ... (Остальной код до parseSalesCSV остается неизменным)
 
+// ... (Остальной код до parseSalesCSV остается неизменным)
+
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -110,15 +112,15 @@ function parseSalesCSV(csvText) {
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
         
         // SALES CSV: 
-        // Мы предполагаем: 0 - Территория, 1 - Группа, 2 - ???, 3 - ???, 4 - Sales USD
+        // 0 - Дата, 1 - Группа/Продукт, 2 - Территория/Парент (предположительно), 3 - ???, 4 - Sales USD (предположительно)
         
         const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
         
-        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Территория (Парент) теперь берется из колонки 1 (индекс 0)
-        const territory = cleanRow[0] || 'Не определено'; // <--- ИЗМЕНЕНИЕ ИНДЕКСА
+        // !!! ОКОНЧАТЕЛЬНОЕ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Территория (Парент) теперь берется из колонки 3 (индекс 2)
+        const territory = cleanRow[2] || 'Не определено'; // <--- ИЗМЕНЕНИЕ ИНДЕКСА
         
-        const usdValueString = cleanRow[4] || '';
+        const usdValueString = cleanRow[4] || ''; // Оставляем Sales USD в колонке 5 (индекс 4)
 
         if (usdValueString.trim() === '') continue;
 
@@ -140,8 +142,6 @@ function parseSalesCSV(csvText) {
     }
     return { aggregatedSales, detailedSales };
 }
-
-// ... (Весь остальной код остается как в предыдущем ответе)
 
 /** ИСПРАВЛЕНИЕ: Корректное определение колонок Target CSV */
 function parseTargetCSV(csvText) {
