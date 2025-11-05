@@ -8,7 +8,7 @@ body {
     background-color: #f8f9fa;
     color: #343a40;
     line-height: 1.6;
-    overflow-x: hidden; /* КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Запрещаем горизонтальную прокрутку на уровне страницы */
+    overflow-x: hidden; 
 }
 header {
     background-color: #ffffff;
@@ -25,7 +25,7 @@ header {
     padding: 0 20px;
 }
 .logo-left, .logo-right {
-    width: 100px; /* Место для логотипов */
+    width: 100px; 
     font-weight: bold;
     color: #ced4da;
     font-size: 0.8em;
@@ -68,7 +68,7 @@ hr {
 }
 
 /* ====================================================================
-   KPI КАРТОЧКИ (Аккуратный дизайн)
+   KPI КАРТОЧКИ
    ==================================================================== */
 .kpi-grid {
     display: flex;
@@ -107,45 +107,31 @@ hr {
 
 
 /* ====================================================================
-   ОСНОВНАЯ КОМПОНОВКА (ФИЛЬТР + ТАБЛИЦА/ГРАФИК)
+   ГОРИЗОНТАЛЬНЫЙ ФИЛЬТР И КОМПОНОВКА
    ==================================================================== */
-.content-wrapper {
-    display: flex;
-    gap: 20px; 
-    align-items: flex-start;
-}
-.filter-panel {
-    flex-shrink: 0; 
-    width: 120px; 
-    padding: 15px;
-    background: #f0f0f5; 
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    position: sticky;
-    top: 20px;
-}
-.filter-panel h3 {
-    margin-top: 0;
-    color: #495057;
-    font-size: 1.1em;
-    border-bottom: 1px solid #ced4da;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
+
+.horizontal-filter-bar {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
 }
 .filter-buttons-container {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: row; 
+    gap: 10px; 
+    flex-wrap: wrap; 
+    justify-content: flex-start;
 }
 .filter-button {
     background: #e9ecef;
     border: none;
-    padding: 8px 10px;
-    text-align: left;
+    padding: 8px 15px; 
+    text-align: center;
     cursor: pointer;
     border-radius: 4px;
     transition: background 0.2s;
     font-weight: 600;
+    flex-grow: 0;
 }
 .filter-button:hover { background: #dee2e6; }
 .filter-button.active {
@@ -163,7 +149,7 @@ hr {
 }
 .table-container {
     flex: 2; /* Таблица занимает 2/3 */
-    overflow-x: auto; /* ВНУТРЕННЯЯ прокрутка, если таблица шире */
+    overflow-x: auto; 
     min-width: 0; 
 }
 .chart-container {
@@ -177,12 +163,12 @@ hr {
 }
 
 /* ====================================================================
-   СТИЛИ ТАБЛИЦЫ (КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ВЫРАВНИВАНИЯ)
+   ОБЩИЕ СТИЛИ ТАБЛИЦЫ
    ==================================================================== */
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Гарантирует одинаковую ширину th и td */
+    table-layout: fixed; 
     min-width: 650px; 
     background: #fff;
     border-radius: 8px;
@@ -193,10 +179,8 @@ th, td {
     padding: 10px 8px; 
     text-align: left;
     border-bottom: 1px solid #f1f1f1;
-    white-space: nowrap; /* Запрещаем перенос текста */
+    white-space: nowrap; 
 }
-
-/* ЗАГОЛОВКИ ТАБЛИЦЫ */
 thead th {
     background-color: #3f51b5; 
     color: white;
@@ -204,38 +188,12 @@ thead th {
     font-size: 0.9em;
     text-transform: uppercase;
 }
-
-/* -----------------------------------------------------------
-   ПРИМЕНЕНИЕ ШИРИНЫ И ВЫРАВНИВАНИЯ (УСТРАНЕНИЕ СДВИГА)
-   ----------------------------------------------------------- */
-
-/* 1. Группа */
-.table-container th:nth-child(1), .table-container td:nth-child(1) { 
-    width: 100px; 
-    text-align: left; 
+tfoot td {
+    background-color: #e9ecef; 
+    font-weight: bold;
+    border-top: 2px solid #ced4da;
 }
-/* 2. Target */
-.table-container th:nth-child(2), .table-container td:nth-child(2) { 
-    width: 130px; 
-    text-align: right; 
-}
-/* 3. Sales */
-.table-container th:nth-child(3), .table-container td:nth-child(3) { 
-    width: 110px; 
-    text-align: right; 
-}
-/* 4. Выполнение */
-.table-container th:nth-child(4), .table-container td:nth-child(4) { 
-    width: 100px; 
-    text-align: right; 
-}
-/* 5. Разница */
-.table-container th:nth-child(5), .table-container td:nth-child(5) { 
-    width: 150px; 
-    text-align: right; 
-}
-
-/* Моноширинный шрифт для чисел */
+/* Моноширинный шрифт для денежных столбцов */
 .table-container td:nth-child(2),
 .table-container td:nth-child(3),
 .table-container td:nth-child(5),
@@ -245,11 +203,27 @@ tfoot td:nth-child(5) {
     font-family: 'Consolas', 'Courier New', monospace; 
 }
 
-tfoot td {
-    background-color: #e9ecef; 
-    font-weight: bold;
-    border-top: 2px solid #ced4da;
-}
+
+/* ====================================================================
+   ШИРИНА КОЛОНОК - ГРУППЫ (5 СТОЛБЦОВ)
+   ==================================================================== */
+
+.table-groups th:nth-child(1), .table-groups td:nth-child(1) { width: 100px; text-align: left; }
+.table-groups th:nth-child(2), .table-groups td:nth-child(2) { width: 130px; text-align: right; }
+.table-groups th:nth-child(3), .table-groups td:nth-child(3) { width: 110px; text-align: right; }
+.table-groups th:nth-child(4), .table-groups td:nth-child(4) { width: 100px; text-align: right; }
+.table-groups th:nth-child(5), .table-groups td:nth-child(5) { width: 150px; text-align: right; }
+
+/* ====================================================================
+   ШИРИНА КОЛОНОК - ТЕРРИТОРИИ (5 СТОЛБЦОВ)
+   ==================================================================== */
+
+#territory-section .table-container th:nth-child(1), #territory-section .table-container td:nth-child(1) { width: 150px; text-align: left; }
+#territory-section .table-container th:nth-child(2), #territory-section .table-container td:nth-child(2) { width: 130px; text-align: right; }
+#territory-section .table-container th:nth-child(3), #territory-section .table-container td:nth-child(3) { width: 110px; text-align: right; }
+#territory-section .table-container th:nth-child(4), #territory-section .table-container td:nth-child(4) { width: 100px; text-align: right; }
+#territory-section .table-container th:nth-child(5), #territory-section .table-container td:nth-child(5) { width: 150px; text-align: right; }
+
 
 /* ====================================================================
    СВЕТОФОР И АДАПТИВНОСТЬ
@@ -259,25 +233,19 @@ tfoot td {
 .percent-bad { color: #dc3545; font-weight: bold; }
 
 @media (max-width: 992px) {
-    .content-wrapper,
     .table-and-chart-section,
     .kpi-grid {
         flex-direction: column;
     }
-    .filter-panel {
-        width: auto;
-        order: -1;
-        position: static;
+    
+    .horizontal-filter-bar {
+        text-align: center;
     }
     .filter-buttons-container {
-        flex-direction: row;
-        flex-wrap: wrap;
         justify-content: center;
     }
     .filter-button {
-        flex-grow: 1;
-        text-align: center;
-        max-width: 120px;
+        max-width: none;
     }
     .chart-container {
         max-height: 350px;
