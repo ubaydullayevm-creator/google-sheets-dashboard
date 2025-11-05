@@ -8,6 +8,15 @@ const TARGET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk
 // URL-адрес CSV для листа "Лист16" (должен быть получен через Файл -> Опубликовать в интернете)
 const SALES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk5hOpz8tnYmIm_zhrSQrAS8mZXzlCcUbQMrMdJ0BJ17cuXjlegDAUK7Nequl8tu2JWpznwFE/pub?gid=407492630&single=true&output=csv';
 
+let allCombinedData = {}; // Здесь будут храниться все данные после загрузки
+let currentChart;         // Ссылка на объект Chart.js для его уничтожения перед обновлением
+let selectedFilterGroup = 'All'; // Текущая выбранная группа для фильтрации
+
+
+// ======================================================================================
+// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ ===
+// ======================================================================================
+
 function cleanGroup(groupName) {
     if (!groupName) return '';
 
@@ -17,8 +26,7 @@ function cleanGroup(groupName) {
         .trim();
 
     if (/^\d+$/.test(cleaned) || cleaned === '') {
-        // Пустая или состоящая только из цифр группа возвращается как пустая строка
-        return '';
+        return ''; 
     }
 
     const parts = cleaned.split(/\s+/);
@@ -36,17 +44,15 @@ function cleanGroup(groupName) {
 function cleanAndParseNumber(rawString) {
     if (!rawString) return NaN;
 
-    // 1. Очистка и удаление лишних символов
     let cleaned = rawString
         .trim()
-        .replace(/^"|"$/g, '')        // Удаляем внешние кавычки (из-за CSV)
-        .replace(/\s/g, '')            // Удаляем все пробелы
-        .replace(/\u00A0/g, '')       // Удаляем неразрывные пробелы
-        .replace(/[^\d,\.\-]/g, '');  // Удаляем все, КРОМЕ цифр, запятой, точки и минуса
+        .replace(/^"|"$/g, '')        
+        .replace(/\s/g, '')            
+        .replace(/\u00A0/g, '')       
+        .replace(/[^\d,\.\-]/g, '');  
 
     if (cleaned === '') return NaN;
     
-    // 2. Стандартизация: преобразуем европейский формат "X,YY" в "X.YY"
     if (cleaned.includes(',')) {
         if (cleaned.includes('.')) {
             cleaned = cleaned.replace(/\./g, '');
@@ -66,7 +72,6 @@ function roundToPrecision(num, precision = 12) {
     const factor = Math.pow(10, precision);
     const correctedNum = Math.round(num * factor) / factor;
     
-    // Округляем до двух знаков после запятой для внутренней точности
     const finalFactor = 100;
     return Math.round(correctedNum * finalFactor) / finalFactor; 
 }
@@ -106,7 +111,7 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (СУММИРУЕМ ДРОБНЫЕ ЧИСЛА) ===
+// === ПАРСИНГ CSV ===
 // ======================================================================================
 
 function parseSalesCSV(csvText) {
@@ -114,10 +119,8 @@ function parseSalesCSV(csvText) {
     const aggregatedSales = {};
 
     for (let i = 1; i < lines.length; i++) {
-        // УСИЛЕННЫЙ ПАРСИНГ
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов (на основе скриншота image_727520.png): Group (1), USD (4)
         if (row.length < 5) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
@@ -129,16 +132,13 @@ function parseSalesCSV(csvText) {
         if (usdValueString.trim() === '') continue;
         
         let usdValue = cleanAndParseNumber(usdValueString); 
-        // Если cleanGroup вернула пустую строку, используем UNGROUPED_SALES
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedSales[key] || 0;
-            // Суммируем ДРОБНЫЕ числа
             aggregatedSales[key] = roundToPrecision(Number(currentSum) + Number(usdValue)); 
         } else if (usdValueString.trim() !== '') {
              console.warn(`[ПАРСИНГ SALES] Пропущена нечисловая строка: Raw USD="${cleanRow[4]}".`);
-             continue;
         }
     }
     return aggregatedSales;
@@ -149,31 +149,26 @@ function parseTargetCSV(csvText) {
     const aggregatedTarget = {};
 
     for (let i = 1; i < lines.length; i++) {
-        // УСИЛЕННЫЙ ПАРСИНГ
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов (на основе скриншота image_0cff1a.png): Group (2), USD (3)
         if (row.length < 4) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
 
-        const rawGroup = cleanRow[2] || '';
+        const rawGroup = cleanRow[2] || ''; // Индекс 2 для Target Group
         const group = cleanGroup(rawGroup);
-        const usdValueString = cleanRow[3] || '';
+        const usdValueString = cleanRow[3] || ''; // Индекс 3 для Target USD
 
         if (usdValueString.trim() === '') continue;
 
         let usdValue = cleanAndParseNumber(usdValueString); 
-        // Если cleanGroup вернула пустую строку, используем UNGROUPED_TARGET
         const key = group === '' ? 'UNGROUPED_TARGET' : group;
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             let currentSum = aggregatedTarget[key] || 0;
-            // Суммируем ДРОБНЫЕ числа
             aggregatedTarget[key] = roundToPrecision(Number(currentSum) + Number(usdValue));
         } else if (usdValueString.trim() !== '') {
             console.warn(`[ПАРСИНГ TARGET] Пропущена нечисловая строка: Raw USD="${cleanRow[3]}".`);
-            continue;
         }
     }
     return aggregatedTarget;
@@ -181,7 +176,7 @@ function parseTargetCSV(csvText) {
 
 
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (ИСКЛЮЧЕНИЕ TIER) ===
+// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (С ФИЛЬТРАЦИЕЙ) ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -193,8 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function fetchData() {
-    // ... (проверка URL и загрузка CSV) ...
-
     if (TARGET_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_TARGET_URL') || SALES_CSV_URL.includes('ВАШ_АКТУАЛЬНЫЙ_SALES_URL')) {
         console.error('Критическая ошибка: Обновите URL-адреса Google Sheets в script.js, используя свежие ссылки.');
         alert('Критическая ошибка: Обновите URL-адреса в файле script.js.');
@@ -222,9 +215,9 @@ async function fetchData() {
         const targets = parseTargetCSV(targetCSV);
         const sales = parseSalesCSV(salesCSV);
 
-        const combinedData = combineData(targets, sales);
-
-        processData(combinedData);
+        allCombinedData = combineData(targets, sales); // Сохраняем все данные
+        generateFilterButtons(allCombinedData); // Генерируем кнопки после загрузки
+        processData(allCombinedData); // Изначально отображаем все данные
 
     } catch (error) {
         console.error('КРИТИЧЕСКАЯ ОШИБКА FETCH/ПАРСИНГА:', error);
@@ -247,13 +240,61 @@ function combineData(targets, sales) {
     return combined;
 }
 
+function generateFilterButtons(data) {
+    const filterContainer = document.getElementById('group-filters');
+    filterContainer.innerHTML = ''; // Очищаем существующие кнопки
 
-function processData(combinedData) {
-    // 1. ПЕРЕМЕННЫЕ ДЛЯ ТОЧНОГО РАСЧЕТА % (Суммируем дробные числа)
+    const groups = new Set();
+    Object.keys(data).forEach(group => {
+        const groupKey = group.toUpperCase();
+        // Исключаем TIER и UNGROUPED из списка кнопок
+        if (groupKey !== 'TIER' && !groupKey.startsWith('UNGROUPED')) {
+            groups.add(group);
+        }
+    });
+
+    // Кнопка "Все"
+    const allButton = document.createElement('button');
+    allButton.textContent = 'All';
+    allButton.classList.add('filter-button', 'all-button');
+    if (selectedFilterGroup === 'All') allButton.classList.add('active');
+    allButton.addEventListener('click', () => {
+        selectedFilterGroup = 'All';
+        updateFilterButtons();
+        processData(allCombinedData); // Показываем все данные
+    });
+    filterContainer.appendChild(allButton);
+
+    // Кнопки для каждой группы
+    Array.from(groups).sort().forEach(group => {
+        const button = document.createElement('button');
+        button.textContent = group;
+        button.classList.add('filter-button');
+        if (selectedFilterGroup === group) button.classList.add('active');
+        button.addEventListener('click', () => {
+            selectedFilterGroup = group;
+            updateFilterButtons();
+            const filteredData = { [group]: allCombinedData[group] }; // Фильтруем данные для одной группы
+            processData(filteredData);
+        });
+        filterContainer.appendChild(button);
+    });
+}
+
+function updateFilterButtons() {
+    document.querySelectorAll('.filter-button').forEach(button => {
+        button.classList.remove('active');
+        if (button.textContent === selectedFilterGroup || (selectedFilterGroup === 'All' && button.textContent === 'All')) {
+            button.classList.add('active');
+        }
+    });
+}
+
+
+function processData(dataToProcess) {
     let totalTarget = 0; 
     let totalSales = 0;   
     
-    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные суммы групп)
     let displayTotalTarget = 0;
     let displayTotalSales = 0;
     
@@ -264,24 +305,34 @@ function processData(combinedData) {
     const chartTargets = [];
     const chartSales = [];
 
-    const sortedGroups = Object.keys(combinedData).sort((a, b) => {
-        return combinedData[b].target - combinedData[a].target;
+    const sortedGroups = Object.keys(dataToProcess).sort((a, b) => {
+        return dataToProcess[b].target - dataToProcess[a].target;
     });
 
     if (sortedGroups.length === 0) {
-        console.error('ОШИБКА ОБРАБОТКИ: combinedData пуст. Парсинг не дал результатов.');
+        console.log('Нет данных для отображения после фильтрации или данные пусты.');
+        // Очищаем KPI, если нет данных для выбранной группы
+        document.getElementById('total-target').textContent = formatNumber(0);
+        document.getElementById('total-sales').textContent = formatNumber(0);
+        document.getElementById('total-percent').textContent = formatPercent(0);
+        document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(0)}`;
+        document.getElementById('footer-target').textContent = formatNumber(0);
+        document.getElementById('footer-sales').textContent = formatNumber(0);
+        document.getElementById('footer-percent').textContent = formatPercent(0);
+        document.getElementById('footer-percent').className = getPercentClass(0);
+        document.getElementById('footer-diff').textContent = formatNumber(0);
+        renderChart([], [], []); // Очищаем график
         return;
     }
 
     for (const group of sortedGroups) {
-        const item = combinedData[group];
+        const item = dataToProcess[group];
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;     
         
         const groupKey = group.toUpperCase();
         
-        // !!! КРИТИЧЕСКАЯ ФИЛЬТРАЦИЯ !!!
-        // Полностью исключаем TIER и любые служебные группы из таблицы и расчетов
+        // !!! ФИЛЬТРАЦИЯ ГРУППЫ: ЕСЛИ TIER ИЛИ UNGROUPED - ПРОПУСКАЕМ СТРОКУ ПОЛНОСТЬЮ !!!
         const isExcludedGroup = groupKey === 'TIER' || 
                                 groupKey.startsWith('UNGROUPED');
         
@@ -290,8 +341,7 @@ function processData(combinedData) {
         }
         // !!! КОНЕЦ ФИЛЬТРАЦИИ !!!
         
-        // A. Обновление точных сумм для расчета процента 
-        // (Теперь TIER здесь не участвует, что корректно для чистой таблицы)
+        // A. Обновление точных сумм для расчета процента (только для НЕИСКЛЮЧЕННЫХ групп)
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
 
@@ -299,8 +349,7 @@ function processData(combinedData) {
         const roundedTarget = Math.round(target); 
         const roundedSales = Math.round(sales);     
         
-        // C. Обновление сумм для вывода ТОТАЛА
-        // (displayTotalTarget теперь является суммой только видимых, округленных групп)
+        // C. Обновление сумм для вывода ТОТАЛА (только для НЕИСКЛЮЧЕННЫХ групп)
         displayTotalTarget += roundedTarget; 
         displayTotalSales += roundedSales;   
 
@@ -330,14 +379,14 @@ function processData(combinedData) {
     const displayTotalDifference = displayTotalTarget - displayTotalSales; 
     
     // Обновление HTML (KPI)
-    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
-    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);     // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('total-target').textContent = formatNumber(displayTotalTarget);
+    document.getElementById('total-sales').textContent = formatNumber(displayTotalSales);
     document.getElementById('total-percent').textContent = formatPercent(totalExecution);
     document.getElementById('total-percent').className = `kpi-percent ${getPercentClass(totalExecution)}`;
 
     // Обновление футера
-    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget); // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
-    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);   // <-- ИСПОЛЬЗУЕМ СУММУ ОКРУГЛЕННЫХ
+    document.getElementById('footer-target').textContent = formatNumber(displayTotalTarget);
+    document.getElementById('footer-sales').textContent = formatNumber(displayTotalSales);
     document.getElementById('footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('footer-percent').className = getPercentClass(totalExecution);
     document.getElementById('footer-diff').textContent = formatNumber(displayTotalDifference);
@@ -348,11 +397,11 @@ function processData(combinedData) {
 function renderChart(labels, targetData, salesData) {
     const ctx = document.getElementById('salesChart').getContext('2d');
 
-    if (window.myChart instanceof Chart) {
-        window.myChart.destroy();
+    if (currentChart) { // Используем глобальную переменную currentChart
+        currentChart.destroy();
     }
     
-    window.myChart = new Chart(ctx, {
+    currentChart = new Chart(ctx, { // Присваиваем объект Chart.js глобальной переменной
         type: 'bar',
         data: {
             labels: labels,
@@ -400,4 +449,4 @@ function renderChart(labels, targetData, salesData) {
     });
 }
 
-setInterval(fetchData, 60000);
+setInterval(fetchData, 60000); // Обновляем данные каждую минуту
