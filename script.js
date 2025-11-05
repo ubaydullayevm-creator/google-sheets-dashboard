@@ -94,12 +94,6 @@ function getPercentClass(value) {
 // === ПАРСИНГ CSV (ИСПРАВЛЕНЫ ИНДЕКСЫ ПАРЕНТОВ) ===
 // ======================================================================================
 
-// ... (Остальной код до parseSalesCSV остается неизменным)
-
-// ... (Остальной код до parseSalesCSV остается неизменным)
-
-// ... (Остальной код до parseSalesCSV остается неизменным)
-
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -109,17 +103,18 @@ function parseSalesCSV(csvText) {
         const line = lines[i];
         const row = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || line.split(',');
 
+        // Убеждаемся, что строка имеет достаточную длину (минимум 5 колонок)
         if (row.length < 5) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
         
         // SALES CSV: 
-        // 0 - Дата, 1 - Группа/Продукт, 2 - Территория/Парент (предположительно), 3 - ???, 4 - Sales USD (предположительно)
+        // 0 - Дата, 1 - Группа/Продукт (используется для Групп), 2 - ТЕРРИТОРИЯ (новое предположение), 3 - ???, 4 - Sales USD 
         
         const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
         
-        // !!! ОКОНЧАТЕЛЬНОЕ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Территория (Парент) теперь берется из колонки 3 (индекс 2)
+        // !!! ИСПРАВЛЕНИЕ: Территория (Парент) берется из колонки 3 (индекс 2)
         const territory = cleanRow[2] || 'Не определено'; // <--- ИЗМЕНЕНИЕ ИНДЕКСА
         
         const usdValueString = cleanRow[4] || ''; // Оставляем Sales USD в колонке 5 (индекс 4)
@@ -138,12 +133,14 @@ function parseSalesCSV(csvText) {
             detailedSales.push({
                 Group: group,
                 Sales: usdValue,
-                Parent: territory // Используем корректную Территорию
+                Parent: territory // Используем индекс 2 для Территории
             });
         }
     }
     return { aggregatedSales, detailedSales };
 }
+
+// ... (Весь остальной код остается как в предыдущем ответе)
 
 // ... (Весь остальной код остается как в предыдущем ответе)
 
