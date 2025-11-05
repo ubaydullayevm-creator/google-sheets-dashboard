@@ -4,35 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nestle Summary</title>
-    <link rel="stylesheet" href="./main.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
-    <header>
-        <div class="logo-container">
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="logo">
+                <img src="balton_logo.png" alt="Balton Logo" class="balton-logo"> </div>
+            <div class="header-title">
+                <h1>Nestle Summary</h1>
+                <p>Last Update</p>
+                <p id="last-update"></p>
             </div>
-        <div class="title-container">
-            <h1>Nestle Summary</h1>
-            <p>Last Update: <span id="last-update"></span></p>
+            <div class="nestle-logo">
+                <img src="nestle_logo.png" alt="Nestle Logo" class="nestle-logo-img"> </div>
+        </header>
+
+        <div class="kpi-section">
+            <div class="kpi-card target-card">
+                <div class="kpi-title">Target</div>
+                <div class="kpi-value" id="total-target">0</div>
+            </div>
+            <div class="kpi-card sales-card">
+                <div class="kpi-title">Sales Projection</div>
+                <div class="kpi-value" id="total-sales">0</div>
+                <div class="kpi-percent" id="total-percent">0%</div>
+            </div>
         </div>
-        <div class="logo-container align-right">
-            </div>
-    </header>
 
-    <main>
-        <section class="kpi-section">
-            <div class="kpi-box">
-                <span class="kpi-title">Target</span>
-                <span class="kpi-value" id="total-target">0</span>
+        <div class="filter-buttons" id="group-filters">
             </div>
-            <div class="kpi-box">
-                <span class="kpi-title">Sales Projection</span>
-                <span class="kpi-value" id="total-sales">0</span>
-                <span class="kpi-percent" id="total-percent">0,0%</span>
-            </div>
-        </section>
 
-        <section class="table-container">
+        <div class="table-container">
             <table>
                 <thead>
                     <tr>
@@ -46,63 +50,22 @@
                 <tbody id="data-table-body">
                     </tbody>
                 <tfoot>
-                    <tr class="total-row">
+                    <tr>
                         <td>Общий итог</td>
                         <td id="footer-target">0</td>
                         <td id="footer-sales">0</td>
-                        <td id="footer-percent">0,0%</td>
+                        <td id="footer-percent">0%</td>
                         <td id="footer-diff">0</td>
                     </tr>
                 </tfoot>
             </table>
-        </section>
-<section class="table-container">
-            </section>
+        </div>
 
-        <section id="territory-section">
-            <h2>Разбивка по Территориям</h2>
-            <div class="chart-territory-container">
-                <div class="pie-chart-box">
-                    <h3>Target по Территориям</h3>
-                    <canvas id="targetPieChart"></canvas>
-                </div>
-                <div class="pie-chart-box">
-                    <h3>Sales по Территориям</h3>
-                    <canvas id="salesPieChart"></canvas>
-                </div>
-            </div>
-
-            <table class="territory-table">
-                <thead>
-                    <tr>
-                        <th>Territory</th>
-                        <th>Target</th>
-                        <th>Sales</th>
-                        <th>Execution in %</th>
-                        <th>Difference</th>
-                    </tr>
-                </thead>
-                <tbody id="territory-table-body">
-                    </tbody>
-                <tfoot>
-                    <tr class="total-row">
-                        <td>Общий итог</td>
-                        <td id="territory-footer-target">0</td>
-                        <td id="territory-footer-sales">0</td>
-                        <td id="territory-footer-percent">0,0%</td>
-                        <td id="territory-footer-diff">0</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </section>
-        <section class="chart-container">
-            </section>
-        <section class="chart-container">
+        <div class="chart-container">
             <canvas id="salesChart"></canvas>
-        </section>
-    </main>
+        </div>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="./script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
