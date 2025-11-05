@@ -9,10 +9,7 @@
 </head>
 <body>
     
-<div class="filter-sidebar" id="group-filters">
-        <div class="filter-title">Фильтры по Группам</div>
-        </div>
-        <div class="dashboard-container">
+    <div class="dashboard-container">
                 <header class="dashboard-header">
             <div class="logo">
                 <img src="balton_logo.png" alt="Balton Logo" class="balton-logo"> 
@@ -39,6 +36,9 @@
             </div>
         </div>
         
+        <div class="filter-buttons" id="group-filters">
+        </div>
+        
                 <div class="table-container">
             <table>
                 <thead>
@@ -64,9 +64,51 @@
             </table>
         </div>
 
-        <div class="chart-container">
+                <div class="chart-container">
             <canvas id="salesChart"></canvas>
         </div>
+
+        <div class="territory-section">
+            <h2>Разбивка по Территориям</h2>
+            
+            <div class="kpi-section territory-kpi-section">
+                <div class="kpi-card target-card">
+                    <div class="kpi-title">Target по Территориям</div>
+                    <div class="kpi-value" id="territory-total-target">0</div>
+                </div>
+                <div class="kpi-card sales-card">
+                    <div class="kpi-title">Sales по Территориям</div>
+                    <div class="kpi-value" id="territory-total-sales">0</div>
+                    <div class="kpi-percent" id="territory-total-percent">0%</div>
+                </div>
+            </div>
+
+            <div class="table-container territory-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Territory</th>
+                            <th>Target</th>
+                            <th>Sales</th>
+                            <th>Execution in %</th>
+                            <th>Difference</th>
+                        </tr>
+                    </thead>
+                    <tbody id="territory-data-table-body">
+                        </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>Общий итог</td>
+                            <td id="territory-footer-target">0</td>
+                            <td id="territory-footer-sales">0</td>
+                            <td id="territory-footer-percent">0%</td>
+                            <td id="territory-footer-diff">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
     </div>
 
     <script src="./script.js"></script>
