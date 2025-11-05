@@ -1,18 +1,53 @@
-/* ОБЩИЕ СТИЛИ */
+/* ====================================================================
+   ОСНОВНЫЕ СТИЛИ И ВЫРАВНИВАНИЕ
+   ==================================================================== */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f9;
-    color: #333;
+    background-color: #f8f9fa; /* Светлый фон */
+    color: #343a40;
+    line-height: 1.6;
+}
+header {
+    background-color: #ffffff;
+    padding: 20px 0;
+    border-bottom: 1px solid #e9ecef;
+    text-align: center;
+}
+header h1 {
+    margin: 0;
+    font-size: 1.8em;
+    color: #495057;
 }
 main {
     padding: 20px;
     max-width: 1400px;
     margin: 0 auto;
 }
+.data-section {
+    margin-bottom: 40px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+h2 {
+    color: #007bff;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+hr {
+    border: none;
+    border-top: 1px solid #ced4da;
+    margin: 30px 0;
+}
 
-/* KPI GRID */
+/* ====================================================================
+   KPI СТИЛИ
+   ==================================================================== */
 .kpi-grid {
     display: flex;
     gap: 20px;
@@ -20,144 +55,196 @@ main {
 }
 .kpi-card {
     flex: 1;
-    background: #fff;
-    padding: 15px;
+    background: #f8f9fa;
+    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    font-size: 1.1em;
-    font-weight: bold;
-    border-left: 5px solid #ccc; /* Базовый цвет */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-size: 1em;
+    font-weight: 600;
+    border: 1px solid #ced4da; /* Четкий ободок */
+    transition: all 0.3s;
+}
+.kpi-value {
+    font-size: 2em;
+    display: block;
+    margin-top: 8px;
+    color: #343a40;
 }
 .kpi-percent {
-    font-size: 1.5em;
+    font-size: 1.2em;
     display: block;
     margin-top: 5px;
+    font-weight: bold;
 }
 
-/* ФИЛЬТР И КОНТЕНТ (СЕКЦИЯ ГРУПП) */
+/* ====================================================================
+   ВЕРТИКАЛЬНЫЙ ФИЛЬТР (Улучшено выравнивание)
+   ==================================================================== */
 .content-wrapper {
     display: flex;
     gap: 25px;
+    align-items: flex-start; /* Выравнивает элементы по верху */
 }
 .filter-panel {
     flex-shrink: 0; 
     width: 150px; 
     padding: 15px;
-    background: #fff;
+    background: #f0f0f5; /* Легкий серый фон */
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: sticky; /* Фиксируем при прокрутке */
+    top: 20px;
+}
+.filter-panel h3 {
+    margin-top: 0;
+    color: #495057;
+    font-size: 1.1em;
+    border-bottom: 1px solid #ced4da;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 .filter-buttons-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 10px;
 }
 .filter-button {
-    background: #f0f0f0;
+    background: #e9ecef;
     border: none;
-    padding: 10px;
+    padding: 10px 12px;
     text-align: left;
     cursor: pointer;
     border-radius: 4px;
-    transition: background 0.3s, color 0.3s;
+    transition: background 0.2s, color 0.2s, transform 0.1s;
+    font-weight: 600;
 }
 .filter-button:hover {
-    background: #ddd;
+    background: #dee2e6;
+    transform: translateY(-1px);
 }
 .filter-button.active {
     background: #007bff;
     color: white;
-    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0, 123, 255, 0.4);
 }
 
-/* ТАБЛИЦА И ГРАФИК (ДЛЯ ГРУПП И ТЕРРИТОРИЙ) */
+/* ====================================================================
+   ТАБЛИЦА И ГРАФИК (Flex-контейнеры)
+   ==================================================================== */
 .table-and-chart-section {
     flex-grow: 1;
     display: flex;
     gap: 20px;
+    /* Убедимся, что таблица и график одинаково растягиваются по вертикали */
+    align-items: stretch;
 }
 .table-container {
-    flex: 2; /* Таблица занимает 2/3 */
+    flex: 2; /* Таблица занимает 2/3 ширины */
     overflow-x: auto;
 }
 .chart-container {
-    flex: 1; /* График занимает 1/3 */
-    max-height: 400px;
-    background: #fff;
+    flex: 1; /* График занимает 1/3 ширины */
+    max-height: 400px; /* Ограничение высоты для кругового графика */
+    background: #ffffff;
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-/* ТЕРРИТОРИИ: Отсутствие фильтра */
-.territory-layout {
-    margin-left: 0; /* Убираем отступ фильтра для второго блока */
-}
 
-/* СТИЛИ ТАБЛИЦЫ */
+/* ====================================================================
+   СТИЛИ ТАБЛИЦЫ (Улучшено выравнивание и дизайн)
+   ==================================================================== */
 table {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 th, td {
     padding: 12px 15px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #f1f1f1; /* Более светлая разделительная линия */
 }
 thead th {
-    background-color: #3f51b5;
+    background-color: #3f51b5; /* Глубокий синий */
     color: white;
-    font-weight: bold;
+    font-weight: 600;
     text-transform: uppercase;
+    font-size: 0.9em;
+}
+tbody tr:last-child td {
+    border-bottom: none;
+}
+tbody tr:nth-child(even) {
+    background-color: #f7f7f7; /* Чередование строк */
 }
 tbody tr:hover {
-    background-color: #f1f1f1;
+    background-color: #e9e9e9;
 }
 tfoot td {
-    background-color: #e0e0e0;
+    background-color: #e9ecef; /* Фон для итоговой строки */
     font-weight: bold;
+    border-top: 2px solid #ced4da;
 }
 .align-right {
     text-align: right;
-    font-family: 'Consolas', 'Courier New', monospace; /* Для выравнивания чисел */
+    /* Фиксированный шрифт для чисел для идеального выравнивания по запятой/точке */
+    font-family: 'Consolas', 'Courier New', monospace; 
 }
 
-/* СВЕТОФОР */
+
+/* ====================================================================
+   СВЕТОФОР Исполнения
+   ==================================================================== */
 .percent-good {
-    color: #5cb85c; /* Green */
+    color: #28a745; /* Green */
     font-weight: bold;
 }
 .percent-ok {
-    color: #f0ad4e; /* Orange */
+    color: #ffc107; /* Amber/Yellow */
     font-weight: bold;
 }
 .percent-bad {
-    color: #d9534f; /* Red */
+    color: #dc3545; /* Red */
     font-weight: bold;
 }
 
-/* Адаптивность (для мобильных/узких экранов) */
-@media (max-width: 900px) {
+/* ====================================================================
+   АДАПТИВНОСТЬ
+   ==================================================================== */
+@media (max-width: 992px) {
     .content-wrapper,
-    .table-and-chart-section,
-    .kpi-grid {
+    .table-and-chart-section {
         flex-direction: column;
     }
     .filter-panel {
         width: auto;
         order: -1; /* Фильтр сверху */
+        position: static; /* Отключаем sticky */
+        top: auto;
     }
     .filter-buttons-container {
         flex-direction: row;
         flex-wrap: wrap;
+        justify-content: center;
     }
     .filter-button {
         flex-grow: 1;
         text-align: center;
+        max-width: 100px; /* Ограничение ширины кнопок на узких экранах */
     }
+    .chart-container {
+        max-height: 350px;
+    }
+    .kpi-grid {
+        flex-direction: column;
+    }
+}
+
+/* Выравнивание второго блока (Территории), где нет фильтра */
+#territory-section .table-and-chart-section {
+    margin-left: 0;
 }
