@@ -184,9 +184,12 @@ function combineData(targets, salesAggregated, salesDetailed) {
 // ======================================================================================
 
 // Внутри script.js
+// Внутри script.js
+
+// Передаем allCombinedData как аргумент, чтобы получить Targets по Group
 function aggregateDataByTerritory(dataDetails, combinedData) {
     const aggregated = {};
-    const groupTargets = {}; // Для хранения Targets по Group
+    const groupTargets = {}; 
 
     // Шаг 1: Сбор Targets по Group из общей комбинации
     Object.keys(combinedData).forEach(key => {
@@ -202,40 +205,55 @@ function aggregateDataByTerritory(dataDetails, combinedData) {
         const group = detail.Group; 
         
         if (!aggregated[territory]) {
-            aggregated[territory] = { target: 0, sales: 0 };
+            aggregated[territory] = { target: 0, sales: 0, groupTarget: 0 }; // Добавляем groupTarget
         }
         
-        // Target каждой Territory - это Target ее Группы.
-        // Это допущение, которое нужно будет изменить, если появится детализированный Target.
-        // Мы присваиваем Target Группы только один раз, чтобы не дублировать его.
-        if (aggregated[territory].target === 0 && groupTargets[group]) {
-             aggregated[territory].target = groupTargets[group];
+        // Target каждой Territory - это Target ее Группы. 
+        // Присваиваем Target Группы только один раз, если он не задан, чтобы избежать дублирования.
+        if (aggregated[territory].groupTarget === 0 && groupTargets[group]) {
+             aggregated[territory].groupTarget = groupTargets[group];
         }
         
         aggregated[territory].sales = roundToPrecision(aggregated[territory].sales + sales);
+        
+        // !!! КРИТИЧНОЕ ИЗМЕНЕНИЕ: НЕ АГРЕГИРУЕМ TARGET ПО TERRITORY !!!
+        // Target для каждой строки Territory остается 0, т.к. мы не знаем его истинное значение.
+        // Будем использовать groupTarget только для расчёта Выполнения/Разницы в строке.
     });
     
-    // Пересчет общих итогов
-    let totalTarget = Object.values(aggregated).reduce((sum, item) => sum + item.target, 0);
+    // Шаг 3: Пересчет общих итогов
+    // Total Target для Territories должен быть равен Total Target для ВСЕХ Groups.
+    // Мы берем его из секции Groups, а не суммируем!
+    let totalTarget = Object.values(groupTargets).reduce((sum, val) => sum + val, 0); 
+    
+    // Total Sales агрегируется правильно
     let totalSales = Object.values(aggregated).reduce((sum, item) => sum + item.sales, 0);
 
     return { aggregated, totalTarget: roundToPrecision(totalTarget), totalSales: roundToPrecision(totalSales) };
 }
 
 
+// Внутри script.js
 function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     const tbody = document.getElementById('territory-data-table-body');
     tbody.innerHTML = '';
     
-    const sortedTerritories = Object.keys(aggregatedData).sort();
+    // Сортировка по убыванию продаж
+    const sortedTerritories = Object.keys(aggregatedData).sort((a, b) => {
+        return aggregatedData[b].sales - aggregatedData[a].sales;
+    });
 
     sortedTerritories.forEach(territory => {
         const data = aggregatedData[territory];
-        const target = Math.round(data.target);
+        
+        const target = 0; // Всегда 0, так как Target не детализирован по Territory
         const sales = Math.round(data.sales);
         
-        const execution = (data.target === 0) ? 0 : roundToPrecision(data.sales / data.target);
-        const difference = roundToPrecision(data.target - data.sales);
+        // Используем groupTarget (Target всей Группы) для расчета выполнения
+        const targetForCalculation = data.groupTarget; 
+        
+        const execution = (targetForCalculation === 0) ? 0 : roundToPrecision(sales / targetForCalculation);
+        const difference = roundToPrecision(targetForCalculation - sales); // Разница рассчитывается от groupTarget
 
         const percentClass = getPercentClass(execution);
         
@@ -255,14 +273,16 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     const totalExecutionClass = getPercentClass(totalExecution);
     const displayTotalTarget = Math.round(totalTarget);
     const displayTotalSales = Math.round(totalSales);
-    const displayTotalDifference = displayTotalTarget - displayTotalSales;
+    const displayTotalDifference = displayTotalTarget - displayTotalSales; // Разница рассчитывается от общего Target
 
+    // Обновление футера
     document.getElementById('territory-footer-target').textContent = formatNumber(displayTotalTarget);
     document.getElementById('territory-footer-sales').textContent = formatNumber(displayTotalSales);
     document.getElementById('territory-footer-percent').textContent = formatPercent(totalExecution);
     document.getElementById('territory-footer-percent').className = `align-right ${totalExecutionClass}`;
     document.getElementById('territory-footer-diff').textContent = formatNumber(displayTotalDifference);
     
+    // Обновление KPI
     document.getElementById('territory-total-target').textContent = formatNumber(displayTotalTarget);
     document.getElementById('territory-total-sales').textContent = formatNumber(displayTotalSales);
     document.getElementById('territory-total-percent').textContent = formatPercent(totalExecution);
