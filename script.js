@@ -94,6 +94,8 @@ function getPercentClass(value) {
 // === ПАРСИНГ CSV (ИСПРАВЛЕНЫ ИНДЕКСЫ ПАРЕНТОВ) ===
 // ======================================================================================
 
+// ... (Остальной код до parseSalesCSV остается неизменным)
+
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -108,13 +110,13 @@ function parseSalesCSV(csvText) {
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
         
         // SALES CSV: 
-        // 0 - Канал, 1 - Группа, 2 - ???, 3 - Территория (Trade, Bukhara и т.д.), 4 - Sales USD
+        // Мы предполагаем: 0 - Территория, 1 - Группа, 2 - ???, 3 - ???, 4 - Sales USD
         
         const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
         
-        // ИСПРАВЛЕНИЕ: Территория (Парент) берется из колонки 4 (индекс 3)
-        const territory = cleanRow[3] || 'Не определено';
+        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Территория (Парент) теперь берется из колонки 1 (индекс 0)
+        const territory = cleanRow[0] || 'Не определено'; // <--- ИЗМЕНЕНИЕ ИНДЕКСА
         
         const usdValueString = cleanRow[4] || '';
 
@@ -138,6 +140,8 @@ function parseSalesCSV(csvText) {
     }
     return { aggregatedSales, detailedSales };
 }
+
+// ... (Весь остальной код остается как в предыдущем ответе)
 
 /** ИСПРАВЛЕНИЕ: Корректное определение колонок Target CSV */
 function parseTargetCSV(csvText) {
