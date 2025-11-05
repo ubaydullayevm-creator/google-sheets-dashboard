@@ -259,7 +259,7 @@ function processData(combinedData) {
     let totalTarget = 0; 
     let totalSales = 0;   
     
-    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные суммы групп)
+    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные группы, ИСКЛЮЧАЯ TIER)
     let displayTotalTarget = 0;
     let displayTotalSales = 0;
     
@@ -281,11 +281,10 @@ function processData(combinedData) {
 
     for (const group of sortedGroups) {
         const item = combinedData[group];
-        // Дробные значения группы, пришедшие из парсера
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;     
         
-        // A. Обновление точных сумм для расчета процента (включая все группы)
+        // A. Обновление точных сумм для расчета процента (включая TIER)
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
 
@@ -294,21 +293,19 @@ function processData(combinedData) {
         const roundedSales = Math.round(sales);     
         
         // C. Обновление сумм для вывода ТОТАЛА
-        // !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: ИСКЛЮЧАЕМ TIER И ВСЕ СЛУЖЕБНЫЕ/НУЛЕВЫЕ ГРУППЫ ИЗ ОБЩЕГО ИТОГА !!!
         const groupKey = group.toUpperCase();
         
-        // Группы, которые не должны идти в KPI, но могут отображаться в таблице
-        const isExcludedGroup = groupKey === 'TIER' || 
-                                groupKey.startsWith('UNGROUPED') ||
-                                (roundedTarget === 0 && roundedSales === 0);
+        // ИСКЛЮЧАЕМ TIER и служебные группы ИЗ ОБЩЕГО ИТОГА!
+        const isExcludedFromTotal = groupKey === 'TIER' || 
+                                    groupKey.startsWith('UNGROUPED');
         
-        if (!isExcludedGroup) {
-            displayTotalTarget += roundedTarget; // СУММА ОКРУГЛЕННЫХ
-            displayTotalSales += roundedSales;   // СУММА ОКРУГЛЕННЫХ
+        if (!isExcludedFromTotal) {
+            displayTotalTarget += roundedTarget; 
+            displayTotalSales += roundedSales;   
         }
         // !!!
 
-        // D. Отображение в таблице (строка TIER будет видна, но не включена в Total)
+        // D. Отображение в таблице (включая TIER)
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
 
