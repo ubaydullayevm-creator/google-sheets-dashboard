@@ -1,15 +1,16 @@
+/* ========================================================================= */
+/* --- 0. Базовые настройки и Макет (Левый сайдбар + Контент) --- */
+/* ========================================================================= */
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 0; /* Удаляем общий padding, он будет внутри контейнера */
+    padding: 0; 
     background-color: #f4f7f6;
     color: #333;
 }
 
-/* ----------------------------------------------------------------- */
-/* --- Основной макет (Sidebar + Content) --- */
-/* ----------------------------------------------------------------- */
-
+/* Фиксированная левая панель для фильтров */
 .filter-sidebar {
     position: fixed; /* Фиксируем на странице */
     top: 0;
@@ -25,17 +26,19 @@ body {
     gap: 10px;
 }
 
+/* Основной контейнер контента (сдвинут вправо) */
 .dashboard-container {
-    max-width: none;
-    margin-left: 150px; /* Сдвигаем основной контент на ширину сайдбара */
-    padding: 30px;
-    background-color: #f4f7f6; /* Меняем фон на body-фон, чтобы не было белого поля */
+    max-width: 1050px; /* Ограничиваем ширину для лучшего восприятия */
+    margin: 0 auto; /* Центрируем основной контент */
+    margin-left: 170px; /* Отступ от фиксированного сайдбара (150px + 20px) */
+    padding: 30px 20px; /* Внутренние отступы */
+    background-color: #f4f7f6; 
     min-height: 100vh;
 }
 
-/* ----------------------------------------------------------------- */
-/* --- Header, KPI (Остаются прежними) --- */
-/* ----------------------------------------------------------------- */
+/* ========================================================================= */
+/* --- 1. Header and KPI --- */
+/* ========================================================================= */
 
 .dashboard-header {
     display: flex;
@@ -46,8 +49,9 @@ body {
     margin-bottom: 30px;
 }
 
-.dashboard-header .logo .balton-logo {
-    height: 60px;
+.dashboard-header .logo .balton-logo,
+.dashboard-header .nestle-logo .nestle-logo-img {
+    height: 60px; 
     width: auto;
 }
 
@@ -69,17 +73,12 @@ body {
     margin: 5px 0 0 0;
 }
 
-.dashboard-header .nestle-logo .nestle-logo-img {
-    height: 60px;
-    width: auto;
-}
-
+/* KPI Section */
 .kpi-section {
     display: flex;
-    justify-content: flex-start; /* Изменено на flex-start, чтобы лучше смотрелось */
+    justify-content: center;
     gap: 30px;
     margin-bottom: 30px;
-    padding: 0 20px;
 }
 
 .kpi-card {
@@ -88,8 +87,8 @@ body {
     padding: 25px 40px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    flex: 0 1 250px; /* Фиксируем ширину для KPI */
-    max-width: 300px; 
+    flex: 1;
+    max-width: 300px;
     position: relative;
 }
 
@@ -123,17 +122,16 @@ body {
     font-weight: bold;
 }
 
-
-/* ----------------------------------------------------------------- */
-/* --- Стили кнопок (Теперь вертикальные) --- */
-/* ----------------------------------------------------------------- */
+/* ========================================================================= */
+/* --- 2. Стили кнопок (Вертикальные) --- */
+/* ========================================================================= */
 
 .filter-button {
     background-color: #e0e0e0;
     color: #333;
     border: none;
-    padding: 10px 5px; /* Уменьшаем padding для узкой колонки */
-    border-radius: 5px; /* Меняем радиус на менее круглый */
+    padding: 10px 5px; 
+    border-radius: 5px; 
     cursor: pointer;
     font-size: 0.9em;
     font-weight: bold;
@@ -157,10 +155,9 @@ body {
     background-color: #337ab7;
 }
 
-
-/* ----------------------------------------------------------------- */
-/* --- Table & Chart (Остаются прежними) --- */
-/* ----------------------------------------------------------------- */
+/* ========================================================================= */
+/* --- 3. Table & Chart --- */
+/* ========================================================================= */
 
 .table-container {
     margin-bottom: 30px;
@@ -205,9 +202,10 @@ table tfoot tr {
     text-align: right;
 }
 
-.percent-good { color: #5cb85c; }
-.percent-ok { color: #f0ad4e; }
-.percent-bad { color: #d9534f; }
+/* Percent Classes */
+.percent-good { color: #5cb85c; } 
+.percent-ok { color: #f0ad4e; }    
+.percent-bad { color: #d9534f; }   
 
 .chart-container {
     background-color: #fff;
@@ -216,29 +214,30 @@ table tfoot tr {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-/* ----------------------------------------------------------------- */
-/* --- Responsive adjustments (для маленьких экранов) --- */
-/* ----------------------------------------------------------------- */
+/* ========================================================================= */
+/* --- 4. Responsive adjustments (для маленьких экранов) --- */
+/* ========================================================================= */
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+    /* На маленьких экранах сайдбар становится обычным, не фиксированным блоком */
     .filter-sidebar {
-        position: relative; /* Отключаем фиксацию */
-        width: 100%; /* Растягиваем на всю ширину */
+        position: relative; 
+        width: 100%; 
         height: auto;
-        flex-direction: row; /* Возвращаем горизонтальный скроллинг кнопок */
+        flex-direction: row; 
         flex-wrap: wrap;
         margin-bottom: 20px;
         box-shadow: none;
+        padding: 10px;
+        justify-content: flex-start;
     }
     
     .dashboard-container {
         margin-left: 0; /* Убираем отступ */
+        max-width: 100%;
         padding: 10px;
     }
     
-    .dashboard-header {
-        flex-direction: column;
-    }
     .kpi-section {
         flex-direction: column;
         align-items: center;
@@ -248,7 +247,7 @@ table tfoot tr {
         flex: 1 1 90%;
     }
     .filter-button {
-        width: auto; /* Позволяем кнопкам быть разной ширины */
-        flex-grow: 1; /* Распределяем пространство */
+        width: auto;
+        flex-grow: 1; 
     }
 }
