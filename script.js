@@ -15,10 +15,10 @@ let selectedFilterGroup = 'All';
 
 
 // ======================================================================================
-// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ (Без изменений) ===
+// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ И СТРОГОВ ФОРМАТА ===
 // ======================================================================================
 
-/** Очистка имени группы (берет первые 2-3 заглавные буквы) */
+/** Очистка имени группы (используется ТОЛЬКО для верхней таблицы) */
 function cleanGroup(rawGroup) {
     if (typeof rawGroup !== 'string') return '';
     const match = rawGroup.trim().toUpperCase().match(/[A-Z]{2,3}/); 
@@ -26,6 +26,28 @@ function cleanGroup(rawGroup) {
         return match[0].substring(0, 3);
     }
     return '';
+}
+
+/** 🚨 КЛЮЧЕВАЯ ФУНКЦИЯ: Исключаем то, что точно НЕ является Парентом */
+function isGroupOrDateOrGeneral(key) {
+    if (typeof key !== 'string') return true; // Исключаем пустые/нестроковые
+    const trimmedUpper = key.trim().toUpperCase();
+    
+    // 1. Чистые группы (2-3 заглавные буквы)
+    if (trimmedUpper.match(/^[A-Z]{2,3}$/)) {
+        const pureGroups = ['IN', 'PF', 'CNF', 'NCF', 'DAI', 'CLN', 'CPW', 'NES', 'PUR']; 
+        if (pureGroups.includes(trimmedUpper) || trimmedUpper.length <= 3) return true;
+    }
+    
+    // 2. Даты (xx.xx.xxxx)
+    if (trimmedUpper.match(/^\d{2}\.\d{2}\.\d{4}$/)) return true; 
+    
+    // 3. Общие / Географические названия, которые могут ошибочно попасть как Паренты
+    const generalExclusions = ['TRADE', 'BUKHARA', 'NAMANGAN', 'TERMEZ', 'URGENCH', 'TA', 'TOTAL'];
+    if (generalExclusions.includes(trimmedUpper)) return true;
+
+    // В противном случае, считаем это Парентом (товаром), включая 015-X, Bi10XX, и др.
+    return false;
 }
 
 /** Очистка и парсинг числа из строки CSV (Без изменений) */
@@ -59,11 +81,9 @@ function roundToPrecision(num, precision = 2) {
     return Math.round(num * factor) / factor;
 }
 
-// ... (Функции форматирования и классов)
-
 
 // ======================================================================================
-// === ПАРСИНГ CSV (КЛЮЧЕВОЕ: Собираем ТОЛЬКО уникальные ключи Парентов) ===
+// === ПАРСИНГ CSV (ПРИМЕНЕНИЕ СТРОГОГО ИСКЛЮЧЕНИЯ) ===
 // ======================================================================================
 
 // --- ФУНКЦИЯ ПАРСИНГА TARGET CSV ---
@@ -80,7 +100,6 @@ function parseTargetCSV(csvText) {
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
         
-        // Target CSV: 0 - Парент/Продукт, 2 - Group, 3 - USD (Target)
         const rawProduct = cleanRow[0] || ''; 
         const rawGroup = cleanRow[2] || ''; 
         const usdValueString = cleanRow[3] || ''; 
@@ -95,16 +114,17 @@ function parseTargetCSV(csvText) {
         if (!isNaN(usdValue) && usdValue !== 0) {
             usdValue = roundToPrecision(usdValue);
 
-            // 1. Агрегация по Группе (для верхней таблицы)
+            // 1. Агрегация по Группе (для верхней таблицы) - ВСЕГДА АГРЕГИРУЕМ
             let currentSumGroup = targetsByGroup[keyGroup] || 0;
             targetsByGroup[keyGroup] = roundToPrecision(Number(currentSumGroup) + Number(usdValue));
 
-            // 2. Агрегация по Продукту (для нижней таблицы). 
-            // Мы просто собираем все, что есть в колонке Парента/Продукта
-            targetsByProduct[keyProduct] = {
-                target: roundToPrecision((targetsByProduct[keyProduct]?.target || 0) + usdValue),
-                group: keyGroup
-            };
+            // 2. Агрегация по Продукту (для нижней таблицы) - ТОЛЬКО ЕСЛИ НЕ ГРУППА/ДАТА
+            if (!isGroupOrDateOrGeneral(keyProduct)) {
+                targetsByProduct[keyProduct] = {
+                    target: roundToPrecision((targetsByProduct[keyProduct]?.target || 0) + usdValue),
+                    group: keyGroup
+                };
+            }
         }
     }
     return { targetsByGroup, targetsByProduct };
@@ -124,9 +144,6 @@ function parseSalesCSV(csvText) {
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
         
-        // SALES CSV: Колонка 1 - Группа/Продукт
-        // Колонка 4 - Sales USD
-        
         const rawGroupAndProduct = cleanRow[1] || ''; 
         const usdValueString = cleanRow[4] || ''; 
 
@@ -134,7 +151,7 @@ function parseSalesCSV(csvText) {
 
         let usdValue = cleanAndParseNumber(usdValueString);
         
-        // 1. Агрегация по ГРУППЕ (для верхней таблицы)
+        // 1. Агрегация по ГРУППЕ (для верхней таблицы) - ВСЕГДА АГРЕГИРУЕМ
         const group = cleanGroup(rawGroupAndProduct); 
         const key = group === '' ? 'UNGROUPED_SALES' : group;
 
@@ -146,14 +163,16 @@ function parseSalesCSV(csvText) {
             aggregatedSales[key] = roundToPrecision(Number(currentSumGroup) + Number(usdValue));
 
             // 2. Детализация для нижней таблицы (по Продукту/Паренту). 
-            // Собираем ВСЕ продажи, т.к. фильтрация будет позже
             const productDetail = rawGroupAndProduct.trim() || 'Не определено'; 
             
-            detailedSales.push({
-                Group: group, 
-                Sales: usdValue,
-                Product: productDetail // Название товара/парент
-            });
+            // 🚨 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавляем в детализацию ТОЛЬКО ЕСЛИ НЕ ГРУППА/ДАТА
+            if (!isGroupOrDateOrGeneral(productDetail)) {
+                detailedSales.push({
+                    Group: group, 
+                    Sales: usdValue,
+                    Product: productDetail // Название товара/парент
+                });
+            }
         }
     }
     return { aggregatedSales, detailedSales };
@@ -161,57 +180,55 @@ function parseSalesCSV(csvText) {
 
 
 // ======================================================================================
-// === ОБЪЕДИНЕНИЕ И ФИЛЬТРАЦИЯ (КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Выбираем только Паренты) ===
+// === ОБЪЕДИНЕНИЕ И ФИЛЬТРАЦИЯ (СВЯЗКА) (Без изменений) ===
 // ======================================================================================
 
 function combineData(targetsByGroup, targetsByProduct, salesAggregated, salesDetailed) {
     // ... (без изменений)
-    const combined = {};
-    const allGroups = new Set([...Object.keys(targetsByGroup), ...Object.keys(salesAggregated)]);
+    const combined = {};
+    const allGroups = new Set([...Object.keys(targetsByGroup), ...Object.keys(salesAggregated)]);
 
-    allGroups.forEach(group => {
-        if (group && group.trim() !== '' && !group.startsWith('UNGROUPED')) {
-            combined[group] = {
-                target: targetsByGroup[group] || 0,
-                sales: salesAggregated[group] || 0
-            };
-        }
-    });
+    allGroups.forEach(group => {
+        if (group && group.trim() !== '' && !group.startsWith('UNGROUPED')) {
+            combined[group] = {
+                target: targetsByGroup[group] || 0,
+                sales: salesAggregated[group] || 0
+            };
+        }
+    });
 
-    combined.allSalesDetails = salesDetailed;
-    combined.allProductTargets = targetsByProduct; 
-    return combined;
+    combined.allSalesDetails = salesDetailed;
+    combined.allProductTargets = targetsByProduct; 
+    return combined;
 }
 
-/** Агрегация данных по Продуктам (называемым 'Территория' в таблице) */
+/** Агрегация данных по Продуктам (называемым 'Территория' в таблице) (Без изменений) */
 function aggregateDataByProduct(dataDetails, combinedData) {
-    const aggregatedSales = {};
-    const productTargets = combinedData.allProductTargets || {}; 
+    const aggregatedSales = {};
+    const productTargets = combinedData.allProductTargets || {}; 
 
     // Шаг 1: Агрегация Sales по Продуктам
-    // Сюда попадают и группы, и паренты, и даты, которые были в Sales CSV
-    dataDetails.forEach(detail => {
-        const product = detail.Product || 'Не определено';
-        const sales = detail.Sales;
-        
-        if (!aggregatedSales[product]) {
-            aggregatedSales[product] = { sales: 0 };
-        }
+    dataDetails.forEach(detail => {
+        const product = detail.Product || 'Не определено';
+        const sales = detail.Sales;
+        
+        if (!aggregatedSales[product]) {
+            aggregatedSales[product] = { sales: 0 };
+        }
 
-        aggregatedSales[product].sales = roundToPrecision(aggregatedSales[product].sales + sales);
-    });
+        aggregatedSales[product].sales = roundToPrecision(aggregatedSales[product].sales + sales);
+    });
 
     // Шаг 2: Объединение с Targets и финальная агрегация
     const finalAggregated = {};
     
-    // 🚨 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: МЫ БЕРЕМ КЛЮЧИ ТОЛЬКО ИЗ TARGET CSV (Паренты)
+    // Используем ТОЛЬКО ключи Парентов, которые прошли фильтрацию в parseTargetCSV
     const allProducts = Object.keys(productTargets); 
 
     allProducts.forEach(product => {
         const targetData = productTargets[product] || { target: 0, group: '' };
         const salesData = aggregatedSales[product] || { sales: 0 };
         
-        // Включаем только те Паренты, для которых есть Target ИЛИ Sales (после агрегации)
         if (targetData.target > 0 || salesData.sales > 0) { 
             let groupMatch = targetData.group; 
             if (dataDetails.length > 0) {
@@ -228,17 +245,17 @@ function aggregateDataByProduct(dataDetails, combinedData) {
     });
 
     // Шаг 3: Пересчет общих итогов (Берем из общих итогов Групп)
-    let totalTarget = 0;
-    let totalSales = 0;
+    let totalTarget = 0;
+    let totalSales = 0;
 
     Object.keys(combinedData).forEach(key => {
-        if (key !== 'allSalesDetails' && key !== 'allProductTargets') {
-             totalTarget = roundToPrecision(totalTarget + (combinedData[key].target || 0));
-             totalSales = roundToPrecision(totalSales + (combinedData[key].sales || 0));
-        }
-    });
+        if (key !== 'allSalesDetails' && key !== 'allProductTargets') {
+             totalTarget = roundToPrecision(totalTarget + (combinedData[key].target || 0));
+             totalSales = roundToPrecision(totalSales + (combinedData[key].sales || 0));
+        }
+    });
 
-    return { 
+    return { 
         aggregated: finalAggregated, 
         totalTarget: roundToPrecision(totalTarget), 
         totalSales: roundToPrecision(totalSales) 
@@ -261,8 +278,7 @@ async function fetchData() { /* ... */ }
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ... (запуск)
-    fetchData();
+    fetchData();
 });
 
 setInterval(fetchData, 60000);
