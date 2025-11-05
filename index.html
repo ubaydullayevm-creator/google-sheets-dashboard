@@ -1,71 +1,73 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nestle Summary</title>
-    <link rel="stylesheet" href="./main.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nestle Summary</title>
+    <link rel="stylesheet" href="./main.css"> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="dashboard-container">
-        <header class="dashboard-header">
-            <div class="logo">
-                <img src="balton_logo.png" alt="Balton Logo" class="balton-logo"> </div>
-            <div class="header-title">
-                <h1>Nestle Summary</h1>
-                <p>Last Update</p>
-                <p id="last-update"></p>
-            </div>
-            <div class="nestle-logo">
-                <img src="nestle_logo.png" alt="Nestle Logo" class="nestle-logo-img"> </div>
-        </header>
-
-        <div class="kpi-section">
-            <div class="kpi-card target-card">
-                <div class="kpi-title">Target</div>
-                <div class="kpi-value" id="total-target">0</div>
-            </div>
-            <div class="kpi-card sales-card">
-                <div class="kpi-title">Sales Projection</div>
-                <div class="kpi-value" id="total-sales">0</div>
-                <div class="kpi-percent" id="total-percent">0%</div>
-            </div>
+    
+    <div class="filter-sidebar" id="group-filters">
         </div>
-
-        <div class="filter-buttons" id="group-filters">
+        <div class="dashboard-container">
+                <header class="dashboard-header">
+            <div class="logo">
+                <img src="balton_logo.png" alt="Balton Logo" class="balton-logo"> 
             </div>
+            <div class="header-title">
+                <h1>Nestle Summary</h1>
+                <p>Last Update</p>
+                <p id="last-update"></p>
+            </div>
+            <div class="nestle-logo">
+                <img src="nestle_logo.png" alt="Nestle Logo" class="nestle-logo-img"> 
+            </div>
+        </header>
 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Group</th>
-                        <th>Target</th>
-                        <th>Sales</th>
-                        <th>Execution in %</th>
-                        <th>Difference</th>
-                    </tr>
-                </thead>
-                <tbody id="data-table-body">
-                    </tbody>
-                <tfoot>
-                    <tr>
-                        <td>Общий итог</td>
-                        <td id="footer-target">0</td>
-                        <td id="footer-sales">0</td>
-                        <td id="footer-percent">0%</td>
-                        <td id="footer-diff">0</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
+                <div class="kpi-section">
+            <div class="kpi-card target-card">
+                <div class="kpi-title">Target</div>
+                <div class="kpi-value" id="total-target">0</div>
+            </div>
+            <div class="kpi-card sales-card">
+                <div class="kpi-title">Sales Projection</div>
+                <div class="kpi-value" id="total-sales">0</div>
+                <div class="kpi-percent" id="total-percent">0%</div>
+            </div>
+        </div>
+        
+                <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Group</th>
+                        <th>Target</th>
+                        <th>Sales</th>
+                        <th>Execution in %</th>
+                        <th>Difference</th>
+                    </tr>
+                </thead>
+                <tbody id="data-table-body">
+                    </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Общий итог</td>
+                        <td id="footer-target">0</td>
+                        <td id="footer-sales">0</td>
+                        <td id="footer-percent">0%</td>
+                        <td id="footer-diff">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
 
-        <div class="chart-container">
-            <canvas id="salesChart"></canvas>
-        </div>
-    </div>
+        <div class="chart-container">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
 
-    <script src="./script.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>
