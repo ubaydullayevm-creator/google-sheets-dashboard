@@ -1,196 +1,212 @@
-/* Базовые стили */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f6f9;
     margin: 0;
     padding: 20px;
+    background-color: #f4f7f6;
     color: #333;
 }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-header .title-container {
-    text-align: center;
-}
-
-header h1 {
-    margin: 0;
-    font-size: 28px;
-    color: #000;
-}
-
-header p {
-    margin: 0;
-    font-size: 14px;
-    color: #555;
-}
-
-header .logo-container {
-    flex: 1;
-}
-header .logo-container.align-right {
-    text-align: right;
-}
-header .logo-container img {
-    max-height: 40px;
-}
-
-main {
+.dashboard-container {
     max-width: 1200px;
     margin: 0 auto;
     background-color: #fff;
-    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 30px;
 }
 
-/* Стили KPI */
-.kpi-section {
+/* Header */
+.dashboard-header {
     display: flex;
-    gap: 20px;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
     margin-bottom: 30px;
 }
 
-.kpi-box {
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px 30px;
+.dashboard-header .logo .balton-logo {
+    height: 60px; /* Adjust as needed */
+    width: auto;
+}
+
+.dashboard-header .header-title {
     text-align: center;
-    min-width: 250px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    flex-grow: 1;
+}
+
+.dashboard-header .header-title h1 {
+    font-size: 2.5em;
+    color: #333;
+    margin: 0;
+    font-weight: bold;
+}
+
+.dashboard-header .header-title p {
+    font-size: 0.9em;
+    color: #666;
+    margin: 5px 0 0 0;
+}
+
+.dashboard-header .nestle-logo .nestle-logo-img {
+    height: 60px; /* Adjust as needed */
+    width: auto;
+}
+
+/* KPI Section */
+.kpi-section {
+    display: flex;
+    justify-content: center;
+    gap: 30px; /* Space between KPI cards */
+    margin-bottom: 30px;
+}
+
+.kpi-card {
+    background-color: #f7f7f7;
+    border-radius: 12px;
+    padding: 25px 40px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    flex: 1;
+    max-width: 300px; /* Max width for individual cards */
+    position: relative; /* For positioning percentage */
+}
+
+.kpi-card.target-card {
+    border: 1px solid #d9534f;
+}
+
+.kpi-card.sales-card {
+    border: 1px solid #5bc0de;
 }
 
 .kpi-title {
-    display: block;
-    font-size: 16px;
-    color: #666;
-    margin-bottom: 8px;
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 10px;
+    font-weight: bold;
 }
 
 .kpi-value {
-    display: block;
-    font-size: 32px;
+    font-size: 2.8em;
     font-weight: bold;
-    color: #222;
+    color: #333;
+    line-height: 1;
 }
 
 .kpi-percent {
-    display: block;
-    font-size: 18px;
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+    font-size: 1.2em;
     font-weight: bold;
-    color: #555; /* Будет меняться в JS */
-    margin-top: 5px;
 }
 
-/* Стили таблицы */
+/* Filter Buttons */
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 30px;
+    justify-content: center;
+}
+
+.filter-button {
+    background-color: #e0e0e0;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: bold;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.filter-button:hover {
+    background-color: #d0d0d0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.filter-button.active {
+    background-color: #5bc0de; /* Active color similar to Sales */
+    color: white;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.filter-button.active.all-button {
+    background-color: #337ab7; /* A distinct color for 'All' */
+}
+
+
+/* Table Styling */
 .table-container {
     margin-bottom: 30px;
+    overflow-x: auto; /* For responsiveness on small screens */
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden; /* Ensures rounded corners */
 }
 
-th, td {
+table th, table td {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #eee;
 }
 
-th {
-    background-color: #f7f7f7;
+table th {
+    background-color: #f2f2f2;
     font-weight: bold;
-    color: #444;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 0.85em;
 }
 
-td:nth-child(2), th:nth-child(2),
-td:nth-child(3), th:nth-child(3),
-td:nth-child(4), th:nth-child(4),
-td:nth-child(5), th:nth-child(5) {
+table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+table tfoot tr {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+    border-top: 2px solid #ddd;
+}
+
+.align-right {
     text-align: right;
 }
 
-/* Строка итогов */
-.total-row {
-    font-weight: bold;
-    background-color: #f0f0f0;
-    border-top: 2px solid #ccc;
-}
+/* Percent Classes */
+.percent-good { color: #5cb85c; } /* Green */
+.percent-ok { color: #f0ad4e; }    /* Orange */
+.percent-bad { color: #d9534f; }   /* Red */
 
-/* Цвета для % выполнения */
-.percent-good { color: #28a745; }
-.percent-ok { color: #ffc107; }
-.percent-bad { color: #dc3545; }
 
-/* Стили графика */
+/* Chart Styling */
 .chart-container {
+    background-color: #fff;
     padding: 20px;
-    background-color: #fdfdfd;
     border-radius: 8px;
-    border: 1px solid #eee;
-}
-/* ... (стили, которые были раньше) */
-
-/* НОВЫЕ СТИЛИ ДЛЯ РАЗДЕЛА ТЕРРИТОРИЙ */
-
-#territory-section {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-#territory-section h2 {
-    font-size: 24px;
-    color: #444;
-    margin-bottom: 20px;
-    text-align: center;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    .kpi-section {
+        flex-direction: column;
+        align-items: center;
+    }
+    .kpi-card {
+        max-width: 90%;
+    }
 }
-
-.chart-territory-container {
-    display: flex;
-    justify-content: space-around;
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-.pie-chart-box {
-    width: 45%; /* Уменьшаем размер, чтобы поместилось два графика */
-    padding: 15px;
-    background-color: #fdfdfd;
-    border-radius: 8px;
-    border: 1px solid #eee;
-    text-align: center;
-}
-
-.pie-chart-box h3 {
-    font-size: 18px;
-    color: #555;
-    margin-top: 0;
-}
-
-.territory-table {
-    width: 100%;
-    margin-top: 30px;
-}
-/* Применяем существующие стили table, th, td к .territory-table */
-.territory-table th, .territory-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-.territory-table th {
-    background-color: #f7f7f7;
-    font-weight: bold;
-    color: #444;
-}
-
-/* ... (стили, которые были раньше) */
