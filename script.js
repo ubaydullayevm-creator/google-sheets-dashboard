@@ -23,7 +23,7 @@ function cleanGroup(rawGroup) {
     if (typeof rawGroup !== 'string') return '';
     const match = rawGroup.trim().toUpperCase().match(/[A-Z]{2,3}/); 
     if (match) {
-        // Мы берем ТОЛЬКО первые 2 или 3 заглавные буквы, чтобы избежать названий продуктов
+        // Мы берем ТОЛЬКО первые 2 или 3 заглавные буквы, чтобы получить IN, NCF, CNF и т.д.
         return match[0].substring(0, 3);
     }
     return '';
@@ -94,7 +94,7 @@ function getPercentClass(value) {
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const targetsByGroup = {};
-    const targetsByParent = {}; 
+    const targetsByProduct = {}; // Для нижней таблицы (Target по продукту)
 
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
@@ -104,8 +104,8 @@ function parseTargetCSV(csvText) {
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
         
-        // Target CSV: 0 - Парент/Территория, 1 - Class, 2 - Group, 3 - USD (Target)
-        const rawParent = cleanRow[0] || ''; // Парент (Территория)
+        // Target CSV: 0 - Парент/Продукт, 1 - Class, 2 - Group, 3 - USD (Target)
+        const rawProduct = cleanRow[0] || ''; // Парент (Продукт/Товар)
         const rawGroup = cleanRow[2] || '';  // Группа
         const usdValueString = cleanRow[3] || ''; // Target USD
 
@@ -115,6 +115,7 @@ function parseTargetCSV(csvText) {
         // Используем очистку, чтобы получить IN, NCF, CNF и т.д.
         const group = cleanGroup(rawGroup); 
         const keyGroup = group === '' ? 'UNGROUPED_TARGET' : group;
+        const keyProduct = rawProduct.trim() || 'Не определено (Продукт)';
 
         if (!isNaN(usdValue) && usdValue !== 0) {
             usdValue = roundToPrecision(usdValue);
@@ -123,12 +124,14 @@ function parseTargetCSV(csvText) {
             let currentSumGroup = targetsByGroup[keyGroup] || 0;
             targetsByGroup[keyGroup] = roundToPrecision(Number(currentSumGroup) + Number(usdValue));
 
-            // 2. Агрегация по Паренту (для общей суммы Target по Территориям)
-            const parentKey = rawParent.trim() || 'Не определено';
-            targetsByParent[parentKey] = roundToPrecision((targetsByParent[parentKey] || 0) + usdValue);
+            // 2. Агрегация по Продукту (для нижней таблицы)
+            targetsByProduct[keyProduct] = {
+                target: roundToPrecision((targetsByProduct[keyProduct]?.target || 0) + usdValue),
+                group: keyGroup // Сохраняем группу для фильтрации
+            };
         }
     }
-    return { targetsByGroup, targetsByParent };
+    return { targetsByGroup, targetsByProduct };
 }
 
 // --- ФУНКЦИЯ ПАРСИНГА SALES CSV ---
@@ -153,7 +156,7 @@ function parseSalesCSV(csvText) {
         // 1. Извлекаем чистую Группу (IN, NCF, CNF) для агрегации в верхней таблице
         const group = cleanGroup(rawGroupAndProduct); 
         
-        // 2. Используем полное название Продукта для детализации в нижней таблице
+        // ИСПРАВЛЕНИЕ: Используем ПОЛНОЕ название из колонки 1 как Продукт для детализации
         const productDetail = rawGroupAndProduct.trim() || 'Не определено'; 
         
         const usdValueString = cleanRow[4] || ''; // Sales USD оставлен в колонке 5 (индекс 4)
@@ -172,9 +175,9 @@ function parseSalesCSV(csvText) {
 
             // 2. Детализация для нижней таблицы (по Продукту)
             detailedSales.push({
-                Group: group, // Используем чистую группу для фильтрации
+                Group: group, // Чистая группа для фильтрации
                 Sales: usdValue,
-                Parent: productDetail // Используем полное название продукта для детализации
+                Product: productDetail // Название товара/парент
             });
         }
     }
@@ -183,10 +186,10 @@ function parseSalesCSV(csvText) {
 
 
 // ======================================================================================
-// === ОБЪЕДИНЕНИЕ ДАННЫХ И ЛОГИКА ТЕРРИТОРИЙ ===
+// === ОБЪЕДИНЕНИЕ ДАННЫХ И ЛОГИКА ТЕРРИТОРИЙ/ПРОДУКТОВ ===
 // ======================================================================================
 
-function combineData(targetsByGroup, targetsByParent, salesAggregated, salesDetailed) {
+function combineData(targetsByGroup, targetsByProduct, salesAggregated, salesDetailed) {
     const combined = {};
     // Объединяем ВСЕ чистые группы, найденные в Target и Sales
     const allGroups = new Set([...Object.keys(targetsByGroup), ...Object.keys(salesAggregated)]);
@@ -202,54 +205,61 @@ function combineData(targetsByGroup, targetsByParent, salesAggregated, salesDeta
     });
 
     combined.allSalesDetails = salesDetailed;
-    combined.allParentTargets = targetsByParent; 
+    combined.allProductTargets = targetsByProduct; // Target по Продуктам
     return combined;
 }
 
 /** Агрегация данных по Продуктам (называемым 'Территория' в таблице) */
-function aggregateDataByTerritory(dataDetails, combinedData) {
-    const aggregated = {};
-    const parentTargets = combinedData.allParentTargets || {}; 
+function aggregateDataByProduct(dataDetails, combinedData) {
+    const aggregatedSales = {};
+    const productTargets = combinedData.allProductTargets || {}; 
 
-    // Для нижней таблицы нам нужна агрегация по Продуктам
+    // Шаг 1: Агрегация Sales по Продуктам
     dataDetails.forEach(detail => {
-        // 'territory' теперь ProductDetail
-        const product = detail.Parent || 'Не определено';
+        const product = detail.Product || 'Не определено';
         const sales = detail.Sales;
         
-        if (!aggregated[product]) {
-            // Target для Продукта всегда 0, как вы и просили
-            const target = 0; 
-            aggregated[product] = { target: target, sales: 0 };
+        if (!aggregatedSales[product]) {
+            aggregatedSales[product] = { sales: 0 };
         }
 
-        aggregated[product].sales = roundToPrecision(aggregated[product].sales + sales);
+        aggregatedSales[product].sales = roundToPrecision(aggregatedSales[product].sales + sales);
     });
 
-    // ИСПРАВЛЕНИЕ: Мы должны исключить Product/Territory, у которых Target > 0 и Sales = 0,
-    // если они не являются чистой Территорией (для фильтра All)
-    Object.keys(aggregated).forEach(product => {
-        // Проверяем, если это не чистая Территория, а Продукт, и у него нет продаж.
-        // Исключаем даты, у которых Sales = 0
-        if (product.match(/\d{2}\.\d{2}\.\d{4}/) && aggregated[product].sales === 0) {
-            delete aggregated[product];
+    // Шаг 2: Объединение с Targets и финальная агрегация
+    const finalAggregated = {};
+    const allProducts = new Set([...Object.keys(aggregatedSales), ...Object.keys(productTargets)]);
+
+    allProducts.forEach(product => {
+        const targetData = productTargets[product] || { target: 0, group: '' };
+        const salesData = aggregatedSales[product] || { sales: 0 };
+
+        // Исключаем пустые элементы, где нет ни Sales, ни Target
+        if (salesData.sales > 0 || targetData.target > 0) {
+            // Для фильтрации по Группе
+            const groupMatch = dataDetails.length > 0 ? dataDetails[0].Group : targetData.group; 
+
+            finalAggregated[product] = {
+                target: targetData.target,
+                sales: salesData.sales,
+                group: groupMatch
+            };
         }
     });
 
-    // Шаг 2: Пересчет общих итогов
-    // Total Target для Territories (нижний KPI) берется из общей суммы Targets Групп (верхней таблицы)
+    // Шаг 3: Пересчет общих итогов (Берем из общих итогов Групп)
     let totalTarget = 0;
     let totalSales = 0;
 
     Object.keys(combinedData).forEach(key => {
-        if (key !== 'allSalesDetails' && key !== 'allParentTargets') {
+        if (key !== 'allSalesDetails' && key !== 'allProductTargets') {
              totalTarget = roundToPrecision(totalTarget + (combinedData[key].target || 0));
              totalSales = roundToPrecision(totalSales + (combinedData[key].sales || 0));
         }
     });
 
     return { 
-        aggregated, 
+        aggregated: finalAggregated, 
         totalTarget: roundToPrecision(totalTarget), 
         totalSales: roundToPrecision(totalSales) 
     };
@@ -274,11 +284,12 @@ function displayGroupData(filteredGroupData) {
     Object.keys(filteredGroupData).forEach(key => {
         const groupKey = key.toUpperCase();
         // Исключаем технические ключи
-        if (key !== 'allSalesDetails' && key !== 'allParentTargets') { 
+        if (key !== 'allSalesDetails' && key !== 'allProductTargets') { 
             groupsToProcess[key] = filteredGroupData[key];
         }
     });
 
+    // Сортировка по Target
     const sortedGroups = Object.keys(groupsToProcess).sort((a, b) => {
         return groupsToProcess[b].target - groupsToProcess[a].target;
     });
@@ -344,7 +355,7 @@ function displayGroupData(filteredGroupData) {
 }
 
 
-/** Отображение данных по Территориям (Продуктам) */
+/** Отображение данных по Продуктам (Территориям) */
 function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     const tbody = document.getElementById('territory-data-table-body');
     tbody.innerHTML = '';
@@ -361,8 +372,8 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     let totalTargetTable = 0;
     let totalSalesTable = 0;
 
-    sortedTerritories.forEach(territory => {
-        const data = aggregatedData[territory];
+    sortedTerritories.forEach(product => {
+        const data = aggregatedData[product];
 
         const target = Math.round(data.target) || 0;
         const sales = Math.round(data.sales);
@@ -379,7 +390,7 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${territory}</td>
+            <td>${product}</td>
             <td class="align-right">${formatNumber(target)}</td>
             <td class="align-right">${formatNumber(sales)}</td>
             <td class="align-right ${percentClass}">${displayExecution}</td> 
@@ -442,7 +453,7 @@ function generateFilterButtons(data) {
     Object.keys(data).forEach(group => {
         const groupKey = group.toUpperCase();
         // Исключаем технические ключи
-        if (groupKey !== 'ALLSALESDETAILS' && groupKey !== 'ALLPARENTTARGETS') { 
+        if (groupKey !== 'ALLSALESDETAILS' && groupKey !== 'ALLPRODUCTTARGETS') { 
             groups.add(group);
         }
     });
@@ -498,7 +509,7 @@ function renderChart(labels, targetData, salesData) {
     });
 }
 
-/** Рендеринг графика для Территорий (Продуктов) */
+/** Рендеринг графика для Продуктов (Территорий) */
 function renderTerritoryChart(aggregatedData) {
     const territoryChartContainer = document.getElementById('territoryChart');
     if (!territoryChartContainer) return;
@@ -509,11 +520,12 @@ function renderTerritoryChart(aggregatedData) {
 
     // Исключаем элементы, у которых Sales = 0 для более чистого графика
     const filteredData = Object.entries(aggregatedData)
-        .filter(([_, data]) => data.sales > 0)
-        .sort((a, b) => b[1].sales - a[1].sales);
+        .filter(([_, data]) => data.sales > 0 || data.target > 0)
+        .sort((a, b) => (b[1].sales + b[1].target) - (a[1].sales + a[1].target));
         
     const labels = filteredData.map(item => item[0]);
-    const salesData = filteredData.map(item => Math.round(item[1].sales));
+    // Используем Sales для круговой диаграммы
+    const salesData = filteredData.map(item => Math.round(item[1].sales)); 
 
     currentTerritoryChart = new Chart(ctx, {
         type: 'doughnut',
@@ -532,7 +544,7 @@ function renderTerritoryChart(aggregatedData) {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                title: { display: true, text: 'Разбивка Sales по Деталям/Продуктам' },
+                title: { display: true, text: 'Разбивка Sales по Продуктам' },
                 legend: { position: 'right' },
                 tooltip: { callbacks: { label: (c) => `${c.label}: ${formatNumber(c.raw)}` } }
             }
@@ -552,7 +564,7 @@ function updateDashboard(combinedData) {
     let filteredGroupData = {};
     Object.keys(combinedData).forEach(key => {
         // Все группы, кроме технических ключей, идут в верхнюю таблицу
-        if (key !== 'allSalesDetails' && key !== 'allParentTargets') { 
+        if (key !== 'allSalesDetails' && key !== 'allProductTargets') { 
             filteredGroupData[key] = combinedData[key];
         }
     });
@@ -563,17 +575,17 @@ function updateDashboard(combinedData) {
 
     // 3. Фильтрация и агрегация Продуктов
     let filteredSalesDetails = combinedData.allSalesDetails;
+    // Фильтруем детали продаж по выбранной Группе
     if (selectedFilterGroup !== 'All') {
-        // Фильтруем детали продаж по выбранной Группе
         filteredSalesDetails = combinedData.allSalesDetails.filter(detail => detail.Group === selectedFilterGroup);
     }
 
     // 4. Агрегация по Продуктам
     // totalTarget и totalSales берутся из общей агрегации (combinedData)
-    const { aggregated: territoryAggregated, totalTarget: territoryTotalTarget, totalSales: territoryTotalSales } = aggregateDataByTerritory(filteredSalesDetails, allCombinedData);
+    const { aggregated: productAggregated, totalTarget: productTotalTarget, totalSales: productTotalSales } = aggregateDataByProduct(filteredSalesDetails, allCombinedData);
 
     // 5. Отображение Продуктов
-    displayTerritoryData(territoryAggregated, territoryTotalTarget, territoryTotalSales);
+    displayTerritoryData(productAggregated, productTotalTarget, productTotalSales);
 
     // Обновление времени
     document.getElementById('last-update').textContent = new Date().toLocaleString('ru-RU', {
@@ -597,10 +609,11 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
 
-        const { targetsByGroup, targetsByParent } = parseTargetCSV(targetCSV); 
+        // targetsByProduct теперь содержит Target по каждому продукту
+        const { targetsByGroup, targetsByProduct } = parseTargetCSV(targetCSV); 
         const { aggregatedSales, detailedSales } = parseSalesCSV(salesCSV);
 
-        allCombinedData = combineData(targetsByGroup, targetsByParent, aggregatedSales, detailedSales); 
+        allCombinedData = combineData(targetsByGroup, targetsByProduct, aggregatedSales, detailedSales); 
 
         generateFilterButtons(allCombinedData);
         updateDashboard(allCombinedData);
