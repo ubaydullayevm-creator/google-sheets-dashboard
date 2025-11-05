@@ -11,8 +11,10 @@
 
     <header>
         <div class="header-container">
-            <div class="logo-left">Balton Logo</div> <h1>Nestle Summary</h1>
-            <div class="logo-right">Nestle Logo</div> </div>
+            <div class="logo-left">Balton Logo</div> 
+            <h1>Nestle Summary</h1>
+            <div class="logo-right">Nestle Logo</div> 
+        </div>
         <p class="update-info">
             Последнее обновление: <span id="last-update">--</span> 
             (Автоматическое обновление каждые 60 сек)
@@ -38,44 +40,40 @@
         <div class="data-section groups-section">
             <h2>📊 Данные по Группам</h2>
             
-            <div class="content-wrapper">
-                
-                <div class="filter-panel">
-                    <h3>Фильтр Групп</h3>
-                    <div class="filter-buttons-container" id="group-filters">
-                        </div>
-                </div>
+            <div class="horizontal-filter-bar">
+                <div class="filter-buttons-container" id="group-filters">
+                    </div>
+            </div>
 
-                <div class="table-and-chart-section">
-                    
-                    <div class="table-container table-groups">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Группа</th>
-                                    <th class="align-right">Target</th>
-                                    <th class="align-right">Sales</th>
-                                    <th class="align-right">Выполнение</th>
-                                    <th class="align-right">Разница</th>
-                                </tr>
-                            </thead>
-                            <tbody id="data-table-body">
-                                </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td>ИТОГО</td>
-                                    <td class="align-right" id="footer-target">0</td>
-                                    <td class="align-right" id="footer-sales">0</td>
-                                    <td class="align-right" id="footer-percent">0,00 %</td>
-                                    <td class="align-right" id="footer-diff">0</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <canvas id="salesChart"></canvas>
-                    </div>
+            <div class="table-and-chart-section">
+                
+                <div class="table-container table-groups">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Группа</th>
+                                <th class="align-right">Target</th>
+                                <th class="align-right">Sales</th>
+                                <th class="align-right">Выполнение</th>
+                                <th class="align-right">Разница</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body">
+                            </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>ИТОГО</td>
+                                <td class="align-right" id="footer-target">0</td>
+                                <td class="align-right" id="footer-sales">0</td>
+                                <td class="align-right" id="footer-percent">0,00 %</td>
+                                <td class="align-right" id="footer-diff">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
                 </div>
             </div>
         </div>
