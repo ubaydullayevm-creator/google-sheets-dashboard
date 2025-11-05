@@ -9,13 +9,13 @@ const TARGET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk
 const SALES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQanJbjk5hOpz8tnYmIm_zhrSQrAS8mZXzlCcUbQMrMdJ0BJ17cuXjlegDAUK7Nequl8tu2JWpznwFE/pub?gid=407492630&single=true&output=csv';
 
 let allCombinedData = {}; // Агрегированные данные по ГРУППАМ и allSalesDetails
-let currentChart;         
-let currentTerritoryChart; 
+let currentChart;         // График Групп
+let currentTerritoryChart; // График Территорий
 let selectedFilterGroup = 'All'; 
 
 
 // ======================================================================================
-// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ (Без изменений) ===
+// === ФУНКЦИИ ТОЧНОСТИ И ПАРСИНГА ЧИСЕЛ ===
 // ======================================================================================
 
 function cleanGroup(groupName) {
@@ -63,7 +63,7 @@ function roundToPrecision(num, precision = 12) {
 
 
 // ======================================================================================
-// === ФОРМАТИРОВАНИЕ И КЛАССЫ (Без изменений) ===
+// === ФОРМАТИРОВАНИЕ И КЛАССЫ ===
 // ======================================================================================
 
 function formatNumber(num) {
@@ -82,7 +82,7 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (ОБНОВЛЕНО для возврата агрегации + деталей) ===
+// === ПАРСИНГ CSV (ОБНОВЛЕНО для агрегации + деталей) ===
 // ======================================================================================
 
 function parseSalesCSV(csvText) {
@@ -158,7 +158,7 @@ function parseTargetCSV(csvText) {
 
 
 // ======================================================================================
-// === ОБЪЕДИНЕНИЕ И АГРЕГАЦИЯ ДАННЫХ (ОБНОВЛЕНО) ===
+// === ОБЪЕДИНЕНИЕ И АГРЕГАЦИЯ ДАННЫХ ===
 // ======================================================================================
 
 function combineData(targets, salesAggregated, salesDetailed) {
@@ -196,7 +196,6 @@ function aggregateDataByTerritory(dataDetails) {
         }
         
         aggregated[territory].sales = roundToPrecision(aggregated[territory].sales + sales);
-        // Target остается 0, так как у нас нет данных Target по территориям
     });
     
     let totalTarget = Object.values(aggregated).reduce((sum, item) => sum + item.target, 0);
@@ -212,9 +211,9 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     
     const sortedTerritories = Object.keys(aggregatedData).sort();
 
-    // Заполняем таблицу
     sortedTerritories.forEach(territory => {
         const data = aggregatedData[territory];
+        // Target === 0, Execution будет 0.00%
         const execution = (data.target === 0) ? 0 : roundToPrecision(data.sales / data.target);
         const difference = roundToPrecision(data.target - data.sales);
 
@@ -258,7 +257,7 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
 }
 
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (ОБНОВЛЕНО) ===
+// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (Группы и Территории) ===
 // ======================================================================================
 
 function processData(combinedData) {
@@ -266,20 +265,18 @@ function processData(combinedData) {
     // 1. Фильтрация данных по ГРУППАМ и подготовка к выводу
     let filteredGroupData = {};
     if (selectedFilterGroup === 'All') {
-        // Копируем все группы, кроме allSalesDetails
         Object.keys(combinedData).forEach(key => {
             if (key !== 'allSalesDetails') {
                 filteredGroupData[key] = combinedData[key];
             }
         });
     } else {
-        // Фильтруем по одной выбранной группе
         if (combinedData[selectedFilterGroup]) {
             filteredGroupData[selectedFilterGroup] = combinedData[selectedFilterGroup];
         }
     }
     
-    // 2. Отображение Групп (используем ВАШУ оригинальную логику вывода)
+    // 2. Отображение Групп
     let totalTarget = 0; 
     let totalSales = 0;   
     let tableBody = document.getElementById('data-table-body');
@@ -291,6 +288,7 @@ function processData(combinedData) {
     const groupsToProcess = {};
     Object.keys(filteredGroupData).forEach(key => {
         const groupKey = key.toUpperCase();
+        // Исключаем системные группы из таблицы
         if (groupKey !== 'TIER' && !groupKey.startsWith('UNGROUPED')) {
             groupsToProcess[key] = filteredGroupData[key];
         }
@@ -351,7 +349,7 @@ function processData(combinedData) {
 
     renderChart(chartLabels, chartTargets, chartSales);
     
-    // 3. Фильтрация и отображение Территорий
+    // 3. Фильтрация и отображение Территорий (СИНХРОНИЗАЦИЯ)
     let filteredSalesDetails = combinedData.allSalesDetails;
     if (selectedFilterGroup !== 'All') {
         // Фильтруем детальные продажи, чтобы показать только продажи выбранной группы
@@ -364,7 +362,7 @@ function processData(combinedData) {
 }
 
 // ======================================================================================
-// === ЛОГИКА ФИЛЬТРОВ И ГРАФИКОВ (Без изменений) ===
+// === ЛОГИКА ФИЛЬТРОВ И ГРАФИКОВ ===
 // ======================================================================================
 
 function updateFilterButtons() {
@@ -383,6 +381,7 @@ function generateFilterButtons(data) {
     const groups = new Set();
     Object.keys(data).forEach(group => {
         const groupKey = group.toUpperCase();
+        // Исключаем системные ключи
         if (groupKey !== 'TIER' && !groupKey.startsWith('UNGROUPED') && groupKey !== 'ALLSALESDETAILS') {
             groups.add(group);
         }
@@ -407,8 +406,6 @@ function generateFilterButtons(data) {
         button.addEventListener('click', () => {
             selectedFilterGroup = group;
             updateFilterButtons();
-            
-            // Передаем весь объект allCombinedData, а фильтрация произойдет в processData
             processData(allCombinedData);
         });
         filterContainer.appendChild(button);
@@ -514,9 +511,9 @@ async function fetchData() {
         const salesCSV = await salesResponse.text();
         
         const targets = parseTargetCSV(targetCSV);
-        const { aggregatedSales, detailedSales } = parseSalesCSV(salesCSV); // Получаем оба результата
+        const { aggregatedSales, detailedSales } = parseSalesCSV(salesCSV);
         
-        allCombinedData = combineData(targets, aggregatedSales, detailedSales); // Передаем детали продаж
+        allCombinedData = combineData(targets, aggregatedSales, detailedSales);
         
         generateFilterButtons(allCombinedData);
         processData(allCombinedData);
