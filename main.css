@@ -11,7 +11,9 @@ body {
 }
 
 /* Фиксированная левая панель для фильтров */
+/* Фиксированная левая панель для фильтров */
 .filter-sidebar {
+    /* ... (существующие стили filter-sidebar) ... */
     position: fixed;
     top: 0;
     left: 0;
@@ -24,8 +26,24 @@ body {
     display: flex;
     flex-direction: column; 
     gap: 10px;
-    overflow-y: auto; /* Добавляем скроллбар только для фильтров, если их много */
+    overflow-y: auto;
 }
+
+/* !!! НОВЫЙ СТИЛЬ ДЛЯ ЗАГОЛОВКА ФИЛЬТРОВ !!! */
+.filter-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    margin-bottom: 15px; /* Отступ от кнопок */
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+/* !!! КОНЕЦ СТИЛЯ ЗАГОЛОВКА !!! */
+
+/* ... (стили кнопок, dashboard-container и т.д. остаются прежними) ... */
 
 /* Основной контейнер контента (растянут на всю оставшуюся ширину) */
 .dashboard-container {
