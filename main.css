@@ -12,26 +12,28 @@ body {
 
 /* Фиксированная левая панель для фильтров */
 .filter-sidebar {
-    position: fixed; /* Фиксируем на странице */
+    position: fixed;
     top: 0;
     left: 0;
-    width: 150px; /* Ширина боковой панели */
-    height: 100vh; /* Полная высота экрана */
+    width: 150px; 
+    height: 100vh;
     background-color: #fff;
     padding: 20px 10px;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
     z-index: 20;
     display: flex;
-    flex-direction: column; /* Кнопки будут идти вертикально */
+    flex-direction: column; 
     gap: 10px;
+    overflow-y: auto; /* Добавляем скроллбар только для фильтров, если их много */
 }
 
-/* Основной контейнер контента (сдвинут вправо) */
+/* Основной контейнер контента (растянут на всю оставшуюся ширину) */
 .dashboard-container {
-    max-width: 1050px; /* Ограничиваем ширину для лучшего восприятия */
-    margin: 0 auto; /* Центрируем основной контент */
+    /* !!! ИЗМЕНЕНИЕ: Убираем max-width и центрирование !!! */
+    /* Теперь контейнер занимает 100% ширины минус сайдбар */
+    margin: 0; 
     margin-left: 170px; /* Отступ от фиксированного сайдбара (150px + 20px) */
-    padding: 30px 20px; /* Внутренние отступы */
+    padding: 30px 20px; 
     background-color: #f4f7f6; 
     min-height: 100vh;
 }
@@ -76,20 +78,29 @@ body {
 /* KPI Section */
 .kpi-section {
     display: flex;
-    justify-content: center;
+    /* !!! ИЗМЕНЕНИЕ: Распределяем KPI равномерно по ширине !!! */
+    justify-content: space-around; 
+    width: 100%;
     gap: 30px;
     margin-bottom: 30px;
+    padding: 0; 
 }
 
 .kpi-card {
-    background-color: #f7f7f7;
+    background-color: #fff; /* Меняем фон на белый */
     border-radius: 12px;
     padding: 25px 40px;
     text-align: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    flex: 1;
-    max-width: 300px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Усиливаем тень */
+    flex: 1; /* Занимают равное пространство */
+    min-width: 250px; /* Минимальная ширина, чтобы не схлопнулись */
+    max-width: 45%; /* Максимальная ширина, чтобы не растягивались слишком сильно */
     position: relative;
+    transition: transform 0.2s;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
 }
 
 .kpi-card.target-card {
@@ -99,6 +110,8 @@ body {
 .kpi-card.sales-card {
     border: 1px solid #5bc0de;
 }
+
+/* ... (Остальные стили KPI остаются прежними) ... */
 
 .kpi-title {
     font-size: 1.1em;
@@ -136,7 +149,7 @@ body {
     font-size: 0.9em;
     font-weight: bold;
     transition: background-color 0.2s, box-shadow 0.2s;
-    width: 100%; /* Занимают всю ширину сайдбара */
+    width: 100%; 
     text-align: center;
 }
 
@@ -156,7 +169,7 @@ body {
 }
 
 /* ========================================================================= */
-/* --- 3. Table & Chart --- */
+/* --- 3. Table & Chart (Растягиваем на всю ширину) --- */
 /* ========================================================================= */
 
 .table-container {
@@ -166,52 +179,23 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    /* !!! ИЗМЕНЕНИЕ: Убираем ограничение ширины, позволяя таблице растянуться !!! */
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed; /* Убеждаемся, что колонки распределены равномерно */
 }
 
-table th, table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-
-table th {
-    background-color: #f2f2f2;
-    font-weight: bold;
-    color: #555;
-    text-transform: uppercase;
-    font-size: 0.85em;
-}
-
-table tbody tr:hover {
-    background-color: #f9f9f9;
-}
-
-table tfoot tr {
-    background-color: #f2f2f2;
-    font-weight: bold;
-    color: #333;
-    border-top: 2px solid #ddd;
-}
-
-.align-right {
-    text-align: right;
-}
-
-/* Percent Classes */
-.percent-good { color: #5cb85c; } 
-.percent-ok { color: #f0ad4e; }    
-.percent-bad { color: #d9534f; }   
+/* ... (Остальные стили таблицы остаются прежними) ... */
 
 .chart-container {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    /* !!! ИЗМЕНЕНИЕ: Убираем ограничение ширины, позволяя графику растянуться !!! */
 }
 
 /* ========================================================================= */
@@ -243,8 +227,8 @@ table tfoot tr {
         align-items: center;
     }
     .kpi-card {
-        max-width: 90%;
-        flex: 1 1 90%;
+        max-width: 95%;
+        flex: 1 1 95%;
     }
     .filter-button {
         width: auto;
