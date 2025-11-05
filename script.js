@@ -183,20 +183,39 @@ function combineData(targets, salesAggregated, salesDetailed) {
 // === ЛОГИКА ТЕРРИТОРИЙ И ОСНОВНОЙ ВЫВОД ===
 // ======================================================================================
 
-function aggregateDataByTerritory(dataDetails) {
+// Внутри script.js
+function aggregateDataByTerritory(dataDetails, combinedData) {
     const aggregated = {};
+    const groupTargets = {}; // Для хранения Targets по Group
+
+    // Шаг 1: Сбор Targets по Group из общей комбинации
+    Object.keys(combinedData).forEach(key => {
+        if (key !== 'allSalesDetails') {
+            groupTargets[key] = combinedData[key].target || 0;
+        }
+    });
     
+    // Шаг 2: Агрегация Sales по Territory и присвоение Target
     dataDetails.forEach(detail => {
         const territory = detail.Parent || 'Не определено';
         const sales = detail.Sales;
+        const group = detail.Group; 
         
         if (!aggregated[territory]) {
             aggregated[territory] = { target: 0, sales: 0 };
         }
         
+        // Target каждой Territory - это Target ее Группы.
+        // Это допущение, которое нужно будет изменить, если появится детализированный Target.
+        // Мы присваиваем Target Группы только один раз, чтобы не дублировать его.
+        if (aggregated[territory].target === 0 && groupTargets[group]) {
+             aggregated[territory].target = groupTargets[group];
+        }
+        
         aggregated[territory].sales = roundToPrecision(aggregated[territory].sales + sales);
     });
     
+    // Пересчет общих итогов
     let totalTarget = Object.values(aggregated).reduce((sum, item) => sum + item.target, 0);
     let totalSales = Object.values(aggregated).reduce((sum, item) => sum + item.sales, 0);
 
@@ -357,7 +376,8 @@ function processData(combinedData) {
         filteredSalesDetails = combinedData.allSalesDetails.filter(detail => detail.Group === selectedFilterGroup);
     }
 
-    const { aggregated: territoryAggregated, totalTarget: territoryTotalTarget, totalSales: territoryTotalSales } = aggregateDataByTerritory(filteredSalesDetails);
+    // ПЕРЕДАЧА allCombinedData для получения Targets
+    const { aggregated: territoryAggregated, totalTarget: territoryTotalTarget, totalSales: territoryTotalSales } = aggregateDataByTerritory(filteredSalesDetails, allCombinedData);
     displayTerritoryData(territoryAggregated, territoryTotalTarget, territoryTotalSales);
 
 }
