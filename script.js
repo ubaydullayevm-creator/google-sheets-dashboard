@@ -117,7 +117,7 @@ function parseSalesCSV(csvText) {
         // УСИЛЕННЫЙ ПАРСИНГ
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов: Group (1), USD (4)
+        // Индексы столбцов (на основе скриншота image_727520.png): Group (1), USD (4)
         if (row.length < 5) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
@@ -152,7 +152,7 @@ function parseTargetCSV(csvText) {
         // УСИЛЕННЫЙ ПАРСИНГ
         const row = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
         
-        // Индексы столбцов: Group (2), USD (3)
+        // Индексы столбцов (на основе скриншота image_0cff1a.png): Group (2), USD (3)
         if (row.length < 4) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
@@ -181,7 +181,7 @@ function parseTargetCSV(csvText) {
 
 
 // ======================================================================================
-// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (ГДЕ РЕШАЕТСЯ ПРОБЛЕМА ТОТАЛА) ===
+// === ОСНОВНАЯ ЛОГИКА И ВЫВОД (ИСКЛЮЧЕНИЕ TIER) ===
 // ======================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -219,12 +219,6 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
         
-        console.log('--- ПРОВЕРКА ИСХОДНЫХ ДАННЫХ SALES ---');
-        console.log(`Количество строк в Sales CSV: ${salesCSV.split('\n').length - 1} (без заголовка)`);
-        console.log(`Первые 500 символов Sales CSV: \n${salesCSV.substring(0, 500)}...`);
-        console.log('-------------------------------------------');
-        
-
         const targets = parseTargetCSV(targetCSV);
         const sales = parseSalesCSV(salesCSV);
 
@@ -259,7 +253,7 @@ function processData(combinedData) {
     let totalTarget = 0; 
     let totalSales = 0;   
     
-    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные группы, ИСКЛЮЧАЯ TIER)
+    // 2. ПЕРЕМЕННЫЕ ДЛЯ ВЫВОДА В ТОТАЛ (Суммируем округленные суммы групп)
     let displayTotalTarget = 0;
     let displayTotalSales = 0;
     
@@ -284,7 +278,20 @@ function processData(combinedData) {
         const target = Number(item.target) || 0; 
         const sales = Number(item.sales) || 0;     
         
-        // A. Обновление точных сумм для расчета процента (включая TIER)
+        const groupKey = group.toUpperCase();
+        
+        // !!! КРИТИЧЕСКАЯ ФИЛЬТРАЦИЯ !!!
+        // Полностью исключаем TIER и любые служебные группы из таблицы и расчетов
+        const isExcludedGroup = groupKey === 'TIER' || 
+                                groupKey.startsWith('UNGROUPED');
+        
+        if (isExcludedGroup) {
+             continue; // Полностью пропускаем эту строку в цикле
+        }
+        // !!! КОНЕЦ ФИЛЬТРАЦИИ !!!
+        
+        // A. Обновление точных сумм для расчета процента 
+        // (Теперь TIER здесь не участвует, что корректно для чистой таблицы)
         totalTarget = roundToPrecision(totalTarget + target);
         totalSales = roundToPrecision(totalSales + sales);
 
@@ -293,19 +300,11 @@ function processData(combinedData) {
         const roundedSales = Math.round(sales);     
         
         // C. Обновление сумм для вывода ТОТАЛА
-        const groupKey = group.toUpperCase();
-        
-        // ИСКЛЮЧАЕМ TIER и служебные группы ИЗ ОБЩЕГО ИТОГА!
-        const isExcludedFromTotal = groupKey === 'TIER' || 
-                                    groupKey.startsWith('UNGROUPED');
-        
-        if (!isExcludedFromTotal) {
-            displayTotalTarget += roundedTarget; 
-            displayTotalSales += roundedSales;   
-        }
-        // !!!
+        // (displayTotalTarget теперь является суммой только видимых, округленных групп)
+        displayTotalTarget += roundedTarget; 
+        displayTotalSales += roundedSales;   
 
-        // D. Отображение в таблице (включая TIER)
+        // D. Отображение в таблице
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target); 
         const difference = roundToPrecision(target - sales);
 
