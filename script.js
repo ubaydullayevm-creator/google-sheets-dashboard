@@ -98,6 +98,8 @@ function getPercentClass(value) {
 
 // ... (Остальной код до parseSalesCSV остается неизменным)
 
+// ... (Остальной код до parseSalesCSV остается неизменным)
+
 function parseSalesCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedSales = {};
@@ -142,6 +144,8 @@ function parseSalesCSV(csvText) {
     }
     return { aggregatedSales, detailedSales };
 }
+
+// ... (Весь остальной код остается как в предыдущем ответе)
 
 /** ИСПРАВЛЕНИЕ: Корректное определение колонок Target CSV */
 function parseTargetCSV(csvText) {
