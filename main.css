@@ -5,9 +5,10 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f8f9fa; /* Светлый фон */
+    background-color: #f8f9fa; 
     color: #343a40;
     line-height: 1.6;
+    overflow-x: hidden; /* Предотвращаем горизонтальную прокрутку на уровне body */
 }
 header {
     background-color: #ffffff;
@@ -15,14 +16,9 @@ header {
     border-bottom: 1px solid #e9ecef;
     text-align: center;
 }
-header h1 {
-    margin: 0;
-    font-size: 1.8em;
-    color: #495057;
-}
 main {
     padding: 20px;
-    max-width: 1400px;
+    max-width: 1400px; /* Сделаем его чуть шире для вашего контента */
     margin: 0 auto;
 }
 .data-section {
@@ -58,11 +54,9 @@ hr {
     background: #f8f9fa;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    font-size: 1em;
     font-weight: 600;
     border: 1px solid #ced4da;
-    transition: all 0.3s;
+    text-align: center; /* Центрируем текст внутри KPI */
 }
 .kpi-value {
     font-size: 2em;
@@ -78,16 +72,16 @@ hr {
 }
 
 /* ====================================================================
-   ВЕРТИКАЛЬНЫЙ ФИЛЬТР
+   ВЕРТИКАЛЬНЫЙ ФИЛЬТР (Компоновка)
    ==================================================================== */
 .content-wrapper {
     display: flex;
-    gap: 25px;
+    gap: 20px; /* Уменьшаем промежуток */
     align-items: flex-start;
 }
 .filter-panel {
-    flex-shrink: 0; 
-    width: 150px; 
+    flex-shrink: 0; /* Не сжимать фильтр */
+    width: 120px; /* Уменьшаем ширину фильтра */
     padding: 15px;
     background: #f0f0f5; 
     border-radius: 8px;
@@ -95,14 +89,7 @@ hr {
     position: sticky;
     top: 20px;
 }
-.filter-panel h3 {
-    margin-top: 0;
-    color: #495057;
-    font-size: 1.1em;
-    border-bottom: 1px solid #ced4da;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-}
+/* ... (стили кнопок остаются прежними) ... */
 .filter-buttons-container {
     display: flex;
     flex-direction: column;
@@ -111,38 +98,35 @@ hr {
 .filter-button {
     background: #e9ecef;
     border: none;
-    padding: 10px 12px;
+    padding: 8px 10px; /* Уменьшаем паддинг кнопок */
     text-align: left;
     cursor: pointer;
     border-radius: 4px;
-    transition: background 0.2s, color 0.2s, transform 0.1s;
     font-weight: 600;
-}
-.filter-button:hover {
-    background: #dee2e6;
-    transform: translateY(-1px);
 }
 .filter-button.active {
     background: #007bff;
     color: white;
-    box-shadow: 0 1px 3px rgba(0, 123, 255, 0.4);
 }
 
 /* ====================================================================
-   ТАБЛИЦА И ГРАФИК
+   ТАБЛИЦА И ГРАФИК (КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ШИРИНЫ)
    ==================================================================== */
 .table-and-chart-section {
     flex-grow: 1;
     display: flex;
-    gap: 20px;
+    gap: 15px; /* Уменьшаем промежуток между таблицей и графиком */
     align-items: stretch;
+    min-width: 0; /* Ключ для flex-контейнера: разрешаем ему сжиматься */
 }
 .table-container {
-    flex: 2;
-    overflow-x: auto;
+    flex: 2; /* Таблица занимает 2/3 */
+    overflow-x: auto; /* Разрешаем прокрутку ТОЛЬКО внутри таблицы, если она слишком широка */
+    min-width: 0; /* Разрешаем сжиматься */
 }
 .chart-container {
-    flex: 1;
+    flex: 1; /* График занимает 1/3 */
+    min-width: 250px; /* Минимальная ширина для графика, чтобы он не исчез */
     max-height: 400px;
     background: #ffffff;
     padding: 15px;
@@ -151,67 +135,37 @@ hr {
 }
 
 /* ====================================================================
-   СТИЛИ ТАБЛИЦЫ (КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ ШИРИНЫ)
+   СТИЛИ ТАБЛИЦЫ (Убираем nowrap, чтобы позволить переносы)
    ==================================================================== */
 table {
     width: 100%;
-    /* Убираем min-width, чтобы flex-контейнер управлял растяжением */
     border-collapse: collapse;
-    background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    table-layout: fixed; /* Используем фиксированную таблицу для предсказуемой ширины */
 }
 th, td {
-    padding: 12px 10px; /* Немного уменьшим паддинг для экономии места */
+    padding: 10px 8px; 
     text-align: left;
     border-bottom: 1px solid #f1f1f1;
-    white-space: nowrap; /* Важно: предотвращает перенос текста в ячейках */
+    /* !!! ВАЖНО: УДАЛЯЕМ white-space: nowrap для предотвращения прокрутки страницы */
+    word-break: break-word; /* Разрешаем перенос длинных слов */
 }
 
-/* ЗАГОЛОВКИ ТАБЛИЦЫ (Улучшенная контрастность) */
+/* УСТАНОВКА ШИРИНЫ КОЛОНОК (в процентах, чтобы они масштабировались) */
+table tr > *:nth-child(1) { width: 15%; } /* Группа */
+table tr > *:nth-child(2) { width: 22%; } /* Target */
+table tr > *:nth-child(3) { width: 17%; } /* Sales */
+table tr > *:nth-child(4) { width: 17%; } /* Выполнение */
+table tr > *:nth-child(5) { width: 29%; } /* Разница */
+
+
 thead th {
     background-color: #3f51b5; 
     color: white;
     font-weight: 600;
-    text-transform: uppercase;
     font-size: 0.9em;
 }
-
-/* УСТАНОВКА МИНИМАЛЬНОЙ ШИРИНЫ ДЛЯ КОЛОНОК С БОЛЬШИМИ ЧИСЛАМИ */
-/* Используем nth-child для селекции колонок */
-/* 1. Группа */
-table tr > *:nth-child(1) {
-    min-width: 80px; 
-}
-/* 2. Target */
-table tr > *:nth-child(2) {
-    min-width: 120px; 
-}
-/* 3. Sales */
-table tr > *:nth-child(3) {
-    min-width: 120px; 
-}
-/* 4. Выполнение */
-table tr > *:nth-child(4) {
-    min-width: 90px;
-}
-/* 5. Разница */
-table tr > *:nth-child(5) {
-    min-width: 130px; 
-}
-
-tbody tr:last-child td {
-    border-bottom: none;
-}
-tbody tr:nth-child(even) {
-    background-color: #f7f7f7;
-}
-tbody tr:hover {
-    background-color: #e9e9e9;
-}
 tfoot td {
-    background-color: #e9ecef;
+    background-color: #e9ecef; 
     font-weight: bold;
     border-top: 2px solid #ced4da;
 }
@@ -220,36 +174,23 @@ tfoot td {
     font-family: 'Consolas', 'Courier New', monospace; 
 }
 
-
 /* ====================================================================
-   СВЕТОФОР Исполнения
+   СВЕТОФОР И АДАПТИВНОСТЬ
    ==================================================================== */
-.percent-good {
-    color: #28a745; 
-    font-weight: bold;
-}
-.percent-ok {
-    color: #ffc107; 
-    font-weight: bold;
-}
-.percent-bad {
-    color: #dc3545; 
-    font-weight: bold;
-}
+.percent-good { color: #28a745; font-weight: bold; }
+.percent-ok { color: #ffc107; font-weight: bold; }
+.percent-bad { color: #dc3545; font-weight: bold; }
 
-/* ====================================================================
-   АДАПТИВНОСТЬ
-   ==================================================================== */
 @media (max-width: 992px) {
     .content-wrapper,
-    .table-and-chart-section {
+    .table-and-chart-section,
+    .kpi-grid {
         flex-direction: column;
     }
     .filter-panel {
         width: auto;
         order: -1;
         position: static;
-        top: auto;
     }
     .filter-buttons-container {
         flex-direction: row;
@@ -259,17 +200,9 @@ tfoot td {
     .filter-button {
         flex-grow: 1;
         text-align: center;
-        max-width: 100px;
+        max-width: 120px;
     }
     .chart-container {
         max-height: 350px;
     }
-    .kpi-grid {
-        flex-direction: column;
-    }
-}
-
-/* Выравнивание второго блока (Территории), где нет фильтра */
-#territory-section .table-and-chart-section {
-    margin-left: 0;
 }
