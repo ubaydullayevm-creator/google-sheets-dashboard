@@ -28,25 +28,26 @@ function cleanGroup(rawGroup) {
     return '';
 }
 
-/** 🚨 КЛЮЧЕВАЯ ФУНКЦИЯ: Исключаем то, что точно НЕ является Парентом */
-function isGroupOrDateOrGeneral(key) {
-    if (typeof key !== 'string') return true; // Исключаем пустые/нестроковые
+/** 🚨 КЛЮЧЕВАЯ ФУНКЦИЯ: Исключаем только ДАТЫ и ГЕО-НАЗВАНИЯ (Версия 11) */
+function isDateOrGeneral(key) {
+    if (typeof key !== 'string' || key.trim() === '') return true; // Исключаем пустые/нестроковые
     const trimmedUpper = key.trim().toUpperCase();
     
-    // 1. Чистые группы (2-3 заглавные буквы)
-    if (trimmedUpper.match(/^[A-Z]{2,3}$/)) {
-        const pureGroups = ['IN', 'PF', 'CNF', 'NCF', 'DAI', 'CLN', 'CPW', 'NES', 'PUR']; 
-        if (pureGroups.includes(trimmedUpper) || trimmedUpper.length <= 3) return true;
-    }
-    
-    // 2. Даты (xx.xx.xxxx)
+    // 1. Даты (xx.xx.xxxx) - главный источник мусора
     if (trimmedUpper.match(/^\d{2}\.\d{2}\.\d{4}$/)) return true; 
     
-    // 3. Общие / Географические названия, которые могут ошибочно попасть как Паренты
-    const generalExclusions = ['TRADE', 'BUKHARA', 'NAMANGAN', 'TERMEZ', 'URGENCH', 'TA', 'TOTAL'];
+    // 2. Общие / Географические названия, которые могут ошибочно попасть как Паренты
+    // Судя по скриншотам, эти названия имеют Target, значит, их нужно исключать
+    const generalExclusions = ['TRADE', 'BUKHARA', 'NAMANGAN', 'TERMEZ', 'URGENCH', 'TA', 'PURINA', 'TOTAL'];
     if (generalExclusions.includes(trimmedUpper)) return true;
 
-    // В противном случае, считаем это Парентом (товаром), включая 015-X, Bi10XX, и др.
+    // 3. Дополнительная проверка на чистую группу (2-3 заглавные буквы)
+    // Эта проверка нужна, только если чистые группы попали в Target CSV
+    if (trimmedUpper.match(/^[A-Z]{2,3}$/)) {
+        const pureGroups = ['IN', 'PF', 'CNF', 'NCF', 'DAI', 'CLN', 'CPW'];
+        if (pureGroups.includes(trimmedUpper)) return true;
+    }
+    
     return false;
 }
 
@@ -118,8 +119,8 @@ function parseTargetCSV(csvText) {
             let currentSumGroup = targetsByGroup[keyGroup] || 0;
             targetsByGroup[keyGroup] = roundToPrecision(Number(currentSumGroup) + Number(usdValue));
 
-            // 2. Агрегация по Продукту (для нижней таблицы) - ТОЛЬКО ЕСЛИ НЕ ГРУППА/ДАТА
-            if (!isGroupOrDateOrGeneral(keyProduct)) {
+            // 2. Агрегация по Продукту (для нижней таблицы) - ТОЛЬКО ЕСЛИ НЕ ДАТА/ГЕО/ГРУППА
+            if (!isDateOrGeneral(keyProduct)) {
                 targetsByProduct[keyProduct] = {
                     target: roundToPrecision((targetsByProduct[keyProduct]?.target || 0) + usdValue),
                     group: keyGroup
@@ -165,8 +166,8 @@ function parseSalesCSV(csvText) {
             // 2. Детализация для нижней таблицы (по Продукту/Паренту). 
             const productDetail = rawGroupAndProduct.trim() || 'Не определено'; 
             
-            // 🚨 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавляем в детализацию ТОЛЬКО ЕСЛИ НЕ ГРУППА/ДАТА
-            if (!isGroupOrDateOrGeneral(productDetail)) {
+            // 🚨 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавляем в детализацию ТОЛЬКО ЕСЛИ НЕ ДАТА/ГЕО/ГРУППА
+            if (!isDateOrGeneral(productDetail)) {
                 detailedSales.push({
                     Group: group, 
                     Sales: usdValue,
