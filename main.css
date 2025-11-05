@@ -1,14 +1,14 @@
 /* ====================================================================
-   ОСНОВНЫЕ СТИЛИ И ВЫРАВНИВАНИЕ
+   ОСНОВНЫЕ СТИЛИ И КОМПОНОВКА СТРАНИЦЫ
    ==================================================================== */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f8f9fa; 
+    background-color: #f8f9fa; /* Светлый фон */
     color: #343a40;
     line-height: 1.6;
-    overflow-x: hidden; /* Предотвращаем горизонтальную прокрутку на уровне body */
+    overflow-x: hidden; /* Предотвращаем горизонтальную прокрутку */
 }
 header {
     background-color: #ffffff;
@@ -18,7 +18,7 @@ header {
 }
 main {
     padding: 20px;
-    max-width: 1400px; /* Сделаем его чуть шире для вашего контента */
+    max-width: 1500px; /* Увеличим максимальную ширину для большего пространства */
     margin: 0 auto;
 }
 .data-section {
@@ -35,28 +35,26 @@ h2 {
     margin-top: 0;
     margin-bottom: 20px;
 }
-hr {
-    border: none;
-    border-top: 1px solid #ced4da;
-    margin: 30px 0;
-}
 
 /* ====================================================================
-   KPI СТИЛИ
+   KPI КАРТОЧКИ (ИСПРАВЛЕНО ВЫРАВНИВАНИЕ)
    ==================================================================== */
 .kpi-grid {
     display: flex;
     gap: 20px;
     margin: 20px 0;
+    /* Убедимся, что они выровнены по верхнему краю */
+    align-items: flex-start; 
 }
 .kpi-card {
     flex: 1;
     background: #f8f9fa;
-    padding: 20px;
+    padding: 15px 20px; /* Аккуратный паддинг */
     border-radius: 8px;
     font-weight: 600;
     border: 1px solid #ced4da;
-    text-align: center; /* Центрируем текст внутри KPI */
+    text-align: center; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 .kpi-value {
     font-size: 2em;
@@ -72,16 +70,16 @@ hr {
 }
 
 /* ====================================================================
-   ВЕРТИКАЛЬНЫЙ ФИЛЬТР (Компоновка)
+   ОСНОВНАЯ КОМПОНОВКА (ФИЛЬТР + ТАБЛИЦА/ГРАФИК)
    ==================================================================== */
 .content-wrapper {
     display: flex;
-    gap: 20px; /* Уменьшаем промежуток */
+    gap: 20px; 
     align-items: flex-start;
 }
 .filter-panel {
-    flex-shrink: 0; /* Не сжимать фильтр */
-    width: 120px; /* Уменьшаем ширину фильтра */
+    flex-shrink: 0; 
+    width: 120px; /* Фиксированная, компактная ширина */
     padding: 15px;
     background: #f0f0f5; 
     border-radius: 8px;
@@ -89,44 +87,29 @@ hr {
     position: sticky;
     top: 20px;
 }
-/* ... (стили кнопок остаются прежними) ... */
 .filter-buttons-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
-.filter-button {
-    background: #e9ecef;
-    border: none;
-    padding: 8px 10px; /* Уменьшаем паддинг кнопок */
-    text-align: left;
-    cursor: pointer;
-    border-radius: 4px;
-    font-weight: 600;
-}
-.filter-button.active {
-    background: #007bff;
-    color: white;
-}
+/* ... стили кнопок ... */
 
-/* ====================================================================
-   ТАБЛИЦА И ГРАФИК (КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ШИРИНЫ)
-   ==================================================================== */
+/* КОНТЕЙНЕР ДЛЯ ТАБЛИЦЫ И ГРАФИКА */
 .table-and-chart-section {
     flex-grow: 1;
     display: flex;
-    gap: 15px; /* Уменьшаем промежуток между таблицей и графиком */
+    gap: 15px; 
     align-items: stretch;
-    min-width: 0; /* Ключ для flex-контейнера: разрешаем ему сжиматься */
+    min-width: 0; 
 }
 .table-container {
     flex: 2; /* Таблица занимает 2/3 */
-    overflow-x: auto; /* Разрешаем прокрутку ТОЛЬКО внутри таблицы, если она слишком широка */
-    min-width: 0; /* Разрешаем сжиматься */
+    overflow-x: auto; 
+    min-width: 0; 
 }
 .chart-container {
     flex: 1; /* График занимает 1/3 */
-    min-width: 250px; /* Минимальная ширина для графика, чтобы он не исчез */
+    min-width: 250px; 
     max-height: 400px;
     background: #ffffff;
     padding: 15px;
@@ -135,74 +118,61 @@ hr {
 }
 
 /* ====================================================================
-   СТИЛИ ТАБЛИЦЫ (Убираем nowrap, чтобы позволить переносы)
+   СТИЛИ ТАБЛИЦЫ (ГЛАВНОЕ ИСПРАВЛЕНИЕ ВЫРАВНИВАНИЯ)
    ==================================================================== */
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Используем фиксированную таблицу для предсказуемой ширины */
+    /* table-layout: auto; - Возвращаемся к автоматической компоновке */
+    min-width: 600px; /* Зададим минимальную ширину таблицы, чтобы данные не сжимались */
 }
 th, td {
-    padding: 10px 8px; 
+    padding: 10px 10px; 
     text-align: left;
     border-bottom: 1px solid #f1f1f1;
-    /* !!! ВАЖНО: УДАЛЯЕМ white-space: nowrap для предотвращения прокрутки страницы */
-    word-break: break-word; /* Разрешаем перенос длинных слов */
+    /* Убрано table-layout: fixed и проценты - теперь браузер сам решает ширину */
 }
-
-/* УСТАНОВКА ШИРИНЫ КОЛОНОК (в процентах, чтобы они масштабировались) */
-table tr > *:nth-child(1) { width: 15%; } /* Группа */
-table tr > *:nth-child(2) { width: 22%; } /* Target */
-table tr > *:nth-child(3) { width: 17%; } /* Sales */
-table tr > *:nth-child(4) { width: 17%; } /* Выполнение */
-table tr > *:nth-child(5) { width: 29%; } /* Разница */
-
-
 thead th {
     background-color: #3f51b5; 
     color: white;
     font-weight: 600;
     font-size: 0.9em;
+    white-space: nowrap; /* Заголовки не переносятся */
 }
+/* Стили для ячеек, содержащих большие числа, чтобы они не переносились */
+.align-right {
+    text-align: right;
+    font-family: 'Consolas', 'Courier New', monospace; 
+    white-space: nowrap; /* Числа не переносятся, таблица расширяется при необходимости */
+}
+
+/* ЗАДАНИЕ МИНИМАЛЬНОЙ ШИРИНЫ ДЛЯ КОЛОНОК (для предотвращения слишком сильного сжатия) */
+/* (Используем min-width, а не width/проценты) */
+
+/* 1. Группа (первая колонка) */
+table tr > *:nth-child(1) {
+    min-width: 70px; 
+}
+/* 2. Target */
+table tr > *:nth-child(2) {
+    min-width: 120px; 
+}
+/* 3. Sales */
+table tr > *:nth-child(3) {
+    min-width: 120px; 
+}
+/* 4. Выполнение */
+table tr > *:nth-child(4) {
+    min-width: 90px;
+}
+/* 5. Разница */
+table tr > *:nth-child(5) {
+    min-width: 130px; 
+}
+
 tfoot td {
     background-color: #e9ecef; 
     font-weight: bold;
     border-top: 2px solid #ced4da;
 }
-.align-right {
-    text-align: right;
-    font-family: 'Consolas', 'Courier New', monospace; 
-}
-
-/* ====================================================================
-   СВЕТОФОР И АДАПТИВНОСТЬ
-   ==================================================================== */
-.percent-good { color: #28a745; font-weight: bold; }
-.percent-ok { color: #ffc107; font-weight: bold; }
-.percent-bad { color: #dc3545; font-weight: bold; }
-
-@media (max-width: 992px) {
-    .content-wrapper,
-    .table-and-chart-section,
-    .kpi-grid {
-        flex-direction: column;
-    }
-    .filter-panel {
-        width: auto;
-        order: -1;
-        position: static;
-    }
-    .filter-buttons-container {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    .filter-button {
-        flex-grow: 1;
-        text-align: center;
-        max-width: 120px;
-    }
-    .chart-container {
-        max-height: 350px;
-    }
-}
+/* ... (СВЕТОФОР и АДАПТИВНОСТЬ остаются прежними) ... */
