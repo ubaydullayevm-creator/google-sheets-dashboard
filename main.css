@@ -1,21 +1,42 @@
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 20px;
+    padding: 0; /* Удаляем общий padding, он будет внутри контейнера */
     background-color: #f4f7f6;
     color: #333;
 }
 
-.dashboard-container {
-    max-width: 1200px;
-    margin: 0 auto;
+/* ----------------------------------------------------------------- */
+/* --- Основной макет (Sidebar + Content) --- */
+/* ----------------------------------------------------------------- */
+
+.filter-sidebar {
+    position: fixed; /* Фиксируем на странице */
+    top: 0;
+    left: 0;
+    width: 150px; /* Ширина боковой панели */
+    height: 100vh; /* Полная высота экрана */
     background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    padding: 30px;
+    padding: 20px 10px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+    z-index: 20;
+    display: flex;
+    flex-direction: column; /* Кнопки будут идти вертикально */
+    gap: 10px;
 }
 
-/* Header */
+.dashboard-container {
+    max-width: none;
+    margin-left: 150px; /* Сдвигаем основной контент на ширину сайдбара */
+    padding: 30px;
+    background-color: #f4f7f6; /* Меняем фон на body-фон, чтобы не было белого поля */
+    min-height: 100vh;
+}
+
+/* ----------------------------------------------------------------- */
+/* --- Header, KPI (Остаются прежними) --- */
+/* ----------------------------------------------------------------- */
+
 .dashboard-header {
     display: flex;
     justify-content: space-between;
@@ -26,7 +47,7 @@ body {
 }
 
 .dashboard-header .logo .balton-logo {
-    height: 60px; /* Adjust as needed */
+    height: 60px;
     width: auto;
 }
 
@@ -49,16 +70,16 @@ body {
 }
 
 .dashboard-header .nestle-logo .nestle-logo-img {
-    height: 60px; /* Adjust as needed */
+    height: 60px;
     width: auto;
 }
 
-/* KPI Section */
 .kpi-section {
     display: flex;
-    justify-content: center;
-    gap: 30px; /* Space between KPI cards */
+    justify-content: flex-start; /* Изменено на flex-start, чтобы лучше смотрелось */
+    gap: 30px;
     margin-bottom: 30px;
+    padding: 0 20px;
 }
 
 .kpi-card {
@@ -67,9 +88,9 @@ body {
     padding: 25px 40px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    flex: 1;
-    max-width: 300px; /* Max width for individual cards */
-    position: relative; /* For positioning percentage */
+    flex: 0 1 250px; /* Фиксируем ширину для KPI */
+    max-width: 300px; 
+    position: relative;
 }
 
 .kpi-card.target-card {
@@ -102,25 +123,23 @@ body {
     font-weight: bold;
 }
 
-/* Filter Buttons */
-.filter-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 30px;
-    justify-content: center;
-}
+
+/* ----------------------------------------------------------------- */
+/* --- Стили кнопок (Теперь вертикальные) --- */
+/* ----------------------------------------------------------------- */
 
 .filter-button {
     background-color: #e0e0e0;
     color: #333;
     border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 10px 5px; /* Уменьшаем padding для узкой колонки */
+    border-radius: 5px; /* Меняем радиус на менее круглый */
     cursor: pointer;
     font-size: 0.9em;
     font-weight: bold;
     transition: background-color 0.2s, box-shadow 0.2s;
+    width: 100%; /* Занимают всю ширину сайдбара */
+    text-align: center;
 }
 
 .filter-button:hover {
@@ -129,28 +148,32 @@ body {
 }
 
 .filter-button.active {
-    background-color: #5bc0de; /* Active color similar to Sales */
+    background-color: #5bc0de;
     color: white;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .filter-button.active.all-button {
-    background-color: #337ab7; /* A distinct color for 'All' */
+    background-color: #337ab7;
 }
 
 
-/* Table Styling */
+/* ----------------------------------------------------------------- */
+/* --- Table & Chart (Остаются прежними) --- */
+/* ----------------------------------------------------------------- */
+
 .table-container {
     margin-bottom: 30px;
-    overflow-x: auto; /* For responsiveness on small screens */
+    overflow-x: auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #fff;
-    border-radius: 8px;
-    overflow: hidden; /* Ensures rounded corners */
 }
 
 table th, table td {
@@ -182,13 +205,10 @@ table tfoot tr {
     text-align: right;
 }
 
-/* Percent Classes */
-.percent-good { color: #5cb85c; } /* Green */
-.percent-ok { color: #f0ad4e; }    /* Orange */
-.percent-bad { color: #d9534f; }   /* Red */
+.percent-good { color: #5cb85c; }
+.percent-ok { color: #f0ad4e; }
+.percent-bad { color: #d9534f; }
 
-
-/* Chart Styling */
 .chart-container {
     background-color: #fff;
     padding: 20px;
@@ -196,11 +216,28 @@ table tfoot tr {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-/* Responsive adjustments */
+/* ----------------------------------------------------------------- */
+/* --- Responsive adjustments (для маленьких экранов) --- */
+/* ----------------------------------------------------------------- */
+
 @media (max-width: 768px) {
+    .filter-sidebar {
+        position: relative; /* Отключаем фиксацию */
+        width: 100%; /* Растягиваем на всю ширину */
+        height: auto;
+        flex-direction: row; /* Возвращаем горизонтальный скроллинг кнопок */
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        box-shadow: none;
+    }
+    
+    .dashboard-container {
+        margin-left: 0; /* Убираем отступ */
+        padding: 10px;
+    }
+    
     .dashboard-header {
         flex-direction: column;
-        text-align: center;
     }
     .kpi-section {
         flex-direction: column;
@@ -208,5 +245,10 @@ table tfoot tr {
     }
     .kpi-card {
         max-width: 90%;
+        flex: 1 1 90%;
+    }
+    .filter-button {
+        width: auto; /* Позволяем кнопкам быть разной ширины */
+        flex-grow: 1; /* Распределяем пространство */
     }
 }
