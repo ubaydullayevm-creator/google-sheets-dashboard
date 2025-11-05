@@ -91,7 +91,7 @@ function getPercentClass(value) {
 
 
 // ======================================================================================
-// === ПАРСИНГ CSV (Целевое исправление: парсинг Targets по Парентам) ===
+// === ПАРСИНГ CSV (ИСПРАВЛЕНЫ ИНДЕКСЫ ПАРЕНТОВ) ===
 // ======================================================================================
 
 function parseSalesCSV(csvText) {
@@ -106,10 +106,16 @@ function parseSalesCSV(csvText) {
         if (row.length < 5) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
-
+        
+        // SALES CSV: 
+        // 0 - Канал, 1 - Группа, 2 - ???, 3 - Территория (Trade, Bukhara и т.д.), 4 - Sales USD
+        
         const rawGroup = cleanRow[1] || '';
         const group = cleanGroup(rawGroup);
+        
+        // ИСПРАВЛЕНИЕ: Территория (Парент) берется из колонки 4 (индекс 3)
         const territory = cleanRow[3] || 'Не определено';
+        
         const usdValueString = cleanRow[4] || '';
 
         if (usdValueString.trim() === '') continue;
@@ -126,17 +132,14 @@ function parseSalesCSV(csvText) {
             detailedSales.push({
                 Group: group,
                 Sales: usdValue,
-                Parent: territory
+                Parent: territory // Используем корректную Территорию
             });
         }
     }
     return { aggregatedSales, detailedSales };
 }
 
-/** ИСПРАВЛЕНО: Теперь парсит Targets по Группам И по Парентам/Территориям */
-// ... (Остальной код до parseTargetCSV остается неизменным)
-
-/** ИСПРАВЛЕНО: Теперь парсит Targets по Группам И по Парентам/Территориям */
+/** ИСПРАВЛЕНИЕ: Корректное определение колонок Target CSV */
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTargetByGroup = {};
@@ -149,9 +152,12 @@ function parseTargetCSV(csvText) {
         if (row.length < 4) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
-
-        // !!! ИСПРАВЛЕНО: Сменили индекс Парента с [0] на [1] в Target CSV !!!
-        const rawParent = cleanRow[1] || ''; // Парент/Территория - колонка 2?
+        
+        // TARGET CSV: 
+        // 0 - Парент (Территория), 1 - Class (Канал), 2 - Группа, 3 - Target USD
+        
+        // ИСПРАВЛЕНИЕ 1: Парент берется из колонки 1 (индекс 0) и НЕ очищается cleanGroup
+        const rawParent = cleanRow[0] || ''; 
         const parent = rawParent.trim();
         
         const rawGroup = cleanRow[2] || '';
@@ -170,7 +176,7 @@ function parseTargetCSV(csvText) {
             let currentSumGroup = aggregatedTargetByGroup[keyGroup] || 0;
             aggregatedTargetByGroup[keyGroup] = roundToPrecision(Number(currentSumGroup) + Number(usdValue));
 
-            // 2. Агрегация по Паренту (для нижней таблицы - НОВАЯ ЛОГИКА)
+            // 2. Агрегация по Паренту (для нижней таблицы)
             if (parent !== '' && parent !== 'Не определено') {
                 let currentSumParent = aggregatedTargetByParent[parent] || 0;
                 aggregatedTargetByParent[parent] = roundToPrecision(Number(currentSumParent) + Number(usdValue));
@@ -180,19 +186,15 @@ function parseTargetCSV(csvText) {
     return { targetsByGroup: aggregatedTargetByGroup, targetsByParent: aggregatedTargetByParent };
 }
 
-// ... (Весь остальной код, включая combineData, aggregateDataByTerritory, displayTerritoryData остается как в предыдущем ответе)
-
 
 // ======================================================================================
-// === ОБЪЕДИНЕНИЕ ДАННЫХ И ЛОГИКА ТЕРРИТОРИЙ (Целевое исправление: использование Targets по Парентам) ===
+// === ОБЪЕДИНЕНИЕ ДАННЫХ И ЛОГИКА ТЕРРИТОРИЙ (Оставляем как есть) ===
 // ======================================================================================
 
-/** ИСПРАВЛЕНО: Принимает Targets по Группам и Парентам. Сохраняет Targets по Парентам в combinedData */
 function combineData(targetsByGroup, targetsByParent, salesAggregated, salesDetailed) {
     const combined = {};
     const allGroups = new Set([...Object.keys(targetsByGroup), ...Object.keys(salesAggregated)]);
 
-    // Логика для верхней таблицы (Target остается Target по Группам)
     allGroups.forEach(group => {
         if (group && group.trim() !== '' && !group.startsWith('UNGROUPED')) {
             combined[group] = {
@@ -203,23 +205,21 @@ function combineData(targetsByGroup, targetsByParent, salesAggregated, salesDeta
     });
 
     combined.allSalesDetails = salesDetailed;
-    combined.allParentTargets = targetsByParent; // НОВОЕ: Хранение Targets по Парентам
+    combined.allParentTargets = targetsByParent; 
     return combined;
 }
 
-/** ИСПРАВЛЕНО: Агрегация данных по Территориям теперь использует Targets по Парентам */
+/** Агрегация данных по Территориям теперь использует Targets по Парентам */
 function aggregateDataByTerritory(dataDetails, combinedData) {
     const aggregated = {};
-    const groupTargets = {};
-    const parentTargets = combinedData.allParentTargets || {}; // НОВОЕ: Берем Targets по Парентам
+    const parentTargets = combinedData.allParentTargets || {}; 
 
-    // Шаг 1: Сбор Sales и присвоение Target по Паренту
+    // Шаг 1: Агрегация Sales по Territory и присвоение Target по Паренту
     dataDetails.forEach(detail => {
         const territory = detail.Parent || 'Не определено';
         const sales = detail.Sales;
-
+        
         if (!aggregated[territory]) {
-            // НОВОЕ: Берем Target из списка Targets по Парентам
             const target = parentTargets[territory] || 0; 
             aggregated[territory] = { target: target, sales: 0 };
         }
@@ -227,8 +227,7 @@ function aggregateDataByTerritory(dataDetails, combinedData) {
         aggregated[territory].sales = roundToPrecision(aggregated[territory].sales + sales);
     });
     
-    // НОВОЕ: Добавляем Парентов, у которых есть Target, но нет продаж в текущем фильтре.
-    // Это нужно, чтобы показать невыполненный Target (актуально при фильтре 'All').
+    // Добавляем Парентов, у которых есть Target, но нет продаж в текущем фильтре.
     if (selectedFilterGroup === 'All') {
         Object.keys(parentTargets).forEach(territory => {
             if (!aggregated[territory]) {
@@ -254,7 +253,7 @@ function aggregateDataByTerritory(dataDetails, combinedData) {
 
 
 // ======================================================================================
-// === ОТОБРАЖЕНИЕ ДАННЫХ (Целевое исправление: расчет выполнения для Территорий) ===
+// === ОТОБРАЖЕНИЕ ДАННЫХ (Оставляем как есть) ===
 // ======================================================================================
 
 /** Отображение данных по Группам (Оставляем как есть) */
@@ -270,7 +269,6 @@ function displayGroupData(filteredGroupData) {
     const groupsToProcess = {};
     Object.keys(filteredGroupData).forEach(key => {
         const groupKey = key.toUpperCase();
-        // Исключаем новое поле allParentTargets
         if (groupKey !== 'TIER' && !groupKey.startsWith('UNGROUPED') && groupKey !== 'ALLSALESDETAILS' && groupKey !== 'ALLPARENTTARGETS') {
             groupsToProcess[key] = filteredGroupData[key];
         }
@@ -339,7 +337,7 @@ function displayGroupData(filteredGroupData) {
 }
 
 
-/** ИСПРАВЛЕНО: Отображение данных по Территориям теперь использует Target для расчета */
+/** Отображение данных по Территориям теперь использует Target для расчета */
 function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     const tbody = document.getElementById('territory-data-table-body');
     tbody.innerHTML = '';
@@ -360,18 +358,15 @@ function displayTerritoryData(aggregatedData, totalTarget, totalSales) {
     sortedTerritories.forEach(territory => {
         const data = aggregatedData[territory];
 
-        // ИСПРАВЛЕНО: Берем Target из агрегированных данных
         const target = Math.round(data.target) || 0;
         const sales = Math.round(data.sales);
         
         totalTargetTable += target;
         totalSalesTable += sales;
 
-        // ИСПРАВЛЕНО: Корректный расчет Выполнения и Разницы
         const execution = (target === 0) ? 0 : roundToPrecision(sales / target);
         const difference = roundToPrecision(target - sales);
 
-        // ИСПРАВЛЕНО: Добавлен светофор
         const percentClass = getPercentClass(execution);
 
         const row = document.createElement('tr');
@@ -592,10 +587,10 @@ async function fetchData() {
         const targetCSV = await targetResponse.text();
         const salesCSV = await salesResponse.text();
 
-        const { targetsByGroup, targetsByParent } = parseTargetCSV(targetCSV); // НОВОЕ: Получаем targetsByParent
+        const { targetsByGroup, targetsByParent } = parseTargetCSV(targetCSV); 
         const { aggregatedSales, detailedSales } = parseSalesCSV(salesCSV);
 
-        allCombinedData = combineData(targetsByGroup, targetsByParent, aggregatedSales, detailedSales); // НОВОЕ: Передаем targetsByParent
+        allCombinedData = combineData(targetsByGroup, targetsByParent, aggregatedSales, detailedSales); 
 
         generateFilterButtons(allCombinedData);
         updateDashboard(allCombinedData);
