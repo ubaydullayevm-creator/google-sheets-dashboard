@@ -3,33 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Sales/Target</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="./main.css"> 
+    <title>Nestle Summary Dashboard</title>
+    <link rel="stylesheet" href="./main.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
     <header>
-        <h1>Аналитика Sales и Target</h1>
-        <p>Последнее обновление: <span id="last-update">...</span> (Автоматическое обновление каждые 60 сек)</p>
+        <div class="header-container">
+            <div class="logo-left">Balton Logo</div> <h1>Nestle Summary</h1>
+            <div class="logo-right">Nestle Logo</div> </div>
+        <p class="update-info">
+            Последнее обновление: <span id="last-update">--</span> 
+            (Автоматическое обновление каждые 60 сек)
+        </p>
     </header>
 
     <main>
         
-        <section id="group-section" class="data-section">
+        <div class="data-section kpi-section">
+            <div class="kpi-grid">
+                <div class="kpi-card target-kpi">
+                    <p class="kpi-label">Target:</p>
+                    <span class="kpi-value" id="total-target">0</span>
+                </div>
+                <div class="kpi-card sales-kpi">
+                    <p class="kpi-label">Sales Projection:</p>
+                    <span class="kpi-value" id="total-sales">0</span>
+                    <span class="kpi-percent" id="total-percent">0,00 %</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-section groups-section">
             <h2>📊 Данные по Группам</h2>
             
-            <div class="kpi-grid">
-                <div class="kpi-card">Target: <span id="total-target" class="kpi-value">0</span></div>
-                <div class="kpi-card">Sales: <span id="total-sales" class="kpi-value">0</span></div>
-                <div class="kpi-card">Выполнение: <span id="total-percent" class="kpi-percent percent-bad">0%</span></div>
-            </div>
-
             <div class="content-wrapper">
                 
                 <div class="filter-panel">
                     <h3>Фильтр Групп</h3>
-                    <div id="group-filters" class="filter-buttons-container">
+                    <div class="filter-buttons-container" id="group-filters">
                         </div>
                 </div>
 
@@ -53,39 +66,45 @@
                                     <td>ИТОГО</td>
                                     <td class="align-right" id="footer-target">0</td>
                                     <td class="align-right" id="footer-sales">0</td>
-                                    <td class="align-right" id="footer-percent">0%</td>
+                                    <td class="align-right" id="footer-percent">0,00 %</td>
                                     <td class="align-right" id="footer-diff">0</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                     
-                    <div class="chart-container chart-groups">
+                    <div class="chart-container">
                         <canvas id="salesChart"></canvas>
                     </div>
                 </div>
             </div>
-        </section>
-
+        </div>
+        
         <hr>
 
-        <section id="territory-section" class="data-section">
-            <h2>🗺️ Разбивка Sales по Территориям (Парент)</h2>
-            <p>Данные в этом блоке автоматически фильтруются выбранной Группой.</p>
+        <div class="data-section territory-section" id="territory-section">
+            <h2>🗺️ Данные по Территориям</h2>
             
             <div class="kpi-grid">
-                <div class="kpi-card">Общий Target (для Группы): <span id="territory-total-target" class="kpi-value">0</span></div>
-                <div class="kpi-card">Общий Sales (для Группы): <span id="territory-total-sales" class="kpi-value">0</span></div>
-                <div class="kpi-card">Общее Выполнение: <span id="territory-total-percent" class="kpi-percent percent-bad">0%</span></div>
+                <div class="kpi-card target-kpi">
+                    <p class="kpi-label">Total Target:</p>
+                    <span class="kpi-value" id="territory-total-target">0</span>
+                </div>
+                <div class="kpi-card sales-kpi">
+                    <p class="kpi-label">Total Sales:</p>
+                    <span class="kpi-value" id="territory-total-sales">0</span>
+                    <span class="kpi-percent" id="territory-total-percent">0,00 %</span>
+                </div>
             </div>
             
-            <div class="table-and-chart-section territory-layout">
-                <div class="table-container table-territories">
+            <div class="table-and-chart-section">
+                
+                <div class="table-container">
                     <table>
                         <thead>
                             <tr>
                                 <th>Территория</th>
-                                <th class="align-right">Target (0)</th>
+                                <th class="align-right">Target</th>
                                 <th class="align-right">Sales</th>
                                 <th class="align-right">Выполнение</th>
                                 <th class="align-right">Разница</th>
@@ -98,18 +117,18 @@
                                 <td>ИТОГО</td>
                                 <td class="align-right" id="territory-footer-target">0</td>
                                 <td class="align-right" id="territory-footer-sales">0</td>
-                                <td class="align-right" id="territory-footer-percent">0%</td>
+                                <td class="align-right" id="territory-footer-percent">0,00 %</td>
                                 <td class="align-right" id="territory-footer-diff">0</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-                
-                <div class="chart-container chart-territories">
-                    <canvas id="territoryChart"></canvas> 
+
+                <div class="chart-container">
+                    <canvas id="territoryChart"></canvas>
                 </div>
             </div>
-        </section>
+        </div>
 
     </main>
 
