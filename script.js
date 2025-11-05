@@ -134,24 +134,24 @@ function parseSalesCSV(csvText) {
 }
 
 /** ИСПРАВЛЕНО: Теперь парсит Targets по Группам И по Парентам/Территориям */
+// ... (Остальной код до parseTargetCSV остается неизменным)
+
+/** ИСПРАВЛЕНО: Теперь парсит Targets по Группам И по Парентам/Территориям */
 function parseTargetCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
     const aggregatedTargetByGroup = {};
-    const aggregatedTargetByParent = {}; // НОВОЕ: Для Targets по Парентам
+    const aggregatedTargetByParent = {}; 
 
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         const row = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || line.split(',');
 
-        // Target CSV: Парент - колонка 1, Группа - колонка 2, USD - колонка 3
-        // ВНИМАНИЕ: СТРУКТУРА КОЛОНОК Target CSV ОТЛИЧАЕТСЯ ОТ SALES CSV
-        // Предполагаемая структура: [Парент, Группа, Target USD] (ваша исходная логика)
-        
         if (row.length < 4) continue;
 
         const cleanRow = row.map(cell => cell.trim().replace(/^"|"$/g, ''));
 
-        const rawParent = cleanRow[0] || ''; // НОВОЕ: Парент - колонка 1 (индекс 0)
+        // !!! ИСПРАВЛЕНО: Сменили индекс Парента с [0] на [1] в Target CSV !!!
+        const rawParent = cleanRow[1] || ''; // Парент/Территория - колонка 2?
         const parent = rawParent.trim();
         
         const rawGroup = cleanRow[2] || '';
@@ -177,9 +177,10 @@ function parseTargetCSV(csvText) {
             }
         }
     }
-    // Возвращаем Target по Группам (старый формат) и Target по Парентам (новый формат)
     return { targetsByGroup: aggregatedTargetByGroup, targetsByParent: aggregatedTargetByParent };
 }
+
+// ... (Весь остальной код, включая combineData, aggregateDataByTerritory, displayTerritoryData остается как в предыдущем ответе)
 
 
 // ======================================================================================
